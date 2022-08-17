@@ -41,8 +41,35 @@ impl Node {
         }
     }
 
+    pub fn resolution(&self) -> u8 {
+        self.hex.resolution()
+    }
+
     pub fn contains(&self, hex: H3Cell) -> bool {
-        unimplemented!()
+        assert!(!(hex == self.hex && !self.children.is_none()));
+        assert!(hex.resolution() >= self.hex.resolution());
+        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
+
+        if self.children.is_none() {
+            hex == self.hex
+        } else if promoted == hex {
+            self.children
+                .as_ref()
+                .unwrap()
+                .binary_search_by_key(&promoted, |node| node.hex)
+                .is_ok()
+        } else {
+            if let Ok(pos) = self
+                .children
+                .as_ref()
+                .unwrap()
+                .binary_search_by_key(&promoted, |node| node.hex)
+            {
+                self.children.as_ref().unwrap()[pos].contains(hex)
+            } else {
+                false
+            }
+        }
     }
 }
 
