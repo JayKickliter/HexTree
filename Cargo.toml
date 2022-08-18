@@ -3,6 +3,9 @@ name = "htree"
 version = "0.1.0"
 edition = "2021"
 
+[dev-dependencies]
+byteorder = "*"
+
 [dependencies]
 h3ron = { version = "0.14.0" }
 serde = { version = "1", optional = true, features = ["derive"] }

@@ -1,5 +1,5 @@
 pub use h3ron;
-use h3ron::{H3Cell, HasH3Resolution, Index};
+use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,7 @@ impl Node {
     }
 
     pub fn contains(&self, hex: H3Cell) -> bool {
-        assert!(!(hex == self.hex && !self.children.is_none()));
+        assert!(hex != self.hex || self.children.is_none());
         assert!(hex.resolution() >= self.hex.resolution());
 
         if !self.hex.is_parent_of(&hex) {
@@ -96,7 +96,7 @@ impl HTree {
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
-        assert!(hex.h3_resolution() >= self.root_res);
+        assert!(hex.resolution() >= self.root_res);
         let promoted = hex.get_parent(self.root_res).unwrap();
         match self.nodes.binary_search_by_key(&promoted, |node| node.hex) {
             Ok(pos) => {
@@ -118,5 +118,38 @@ impl HTree {
         } else {
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use byteorder::{ReadBytesExt, LE};
+    use std::io::Cursor;
+
+    static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
+
+    #[test]
+    fn all_up() {
+        let mut hexagons: Vec<H3Cell> =
+            Vec::with_capacity(US915_SERIALIZED.len() / std::mem::size_of::<H3Cell>());
+        let mut csr = Cursor::new(US915_SERIALIZED);
+        let mut base_res = u8::MAX;
+        while let Ok(raw_index) = csr.read_u64::<LE>() {
+            let cell = H3Cell::try_from(raw_index).unwrap();
+            base_res = std::cmp::min(base_res, cell.resolution());
+            hexagons.push(cell);
+        }
+        assert!(!hexagons.is_empty());
+        println!("{} {}", hexagons.len(), base_res);
+
+        let _tree = {
+            let mut tree = HTree::new(base_res);
+            for (i, hex) in hexagons.into_iter().enumerate() {
+                println!("{}: {:?}", i, hex);
+                tree.insert(hex);
+            }
+            tree
+        };
     }
 }
