@@ -14,16 +14,17 @@ pub struct HTree {
 }
 
 // get all the Digits out of the cell
-fn parse_h3cell(hex: H3Cell) -> [u32] {
+fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
     let index = hex.h3index();
     let resolution = hex.resolution();
 
-    let mut children = [];
+    let mut children = Vec::new();
 
     for r in 0..(resolution - 1) {
         let offset = 0x2a + ( 3 * r);
-        children[r] = (index >> offset) & 0b111;
+        children.push(((index >> offset) & 0b111) as usize);
     }
+    children.reverse();
     return children;
 }
 
@@ -40,31 +41,39 @@ impl Node {
         }
     }
 
-    pub fn insert(&mut self, digits: [u8]) {
-        let (head, tail) = digits.split_at(1);
-        let digit = head[0];
-        // TODO check if this node is "full"
-        match self.children[digit] {
-            Some(node) =>
-                node.insert(tail),
-            None => {
-                let node = Node::new();
-                node.insert(tail);
-                self.children[digit] = node;
-            }
+    pub fn insert(&mut self, mut digits: Vec<usize>) {
+        match digits.pop() {
+            Some(digit) => {
+                // TODO check if this node is "full"
+                match &self.children[digit] {
+                    Some(mut node) =>
+                        node.insert(digits),
+                    None => {
+                        let mut node = Node::new();
+                        node.insert(digits);
+                        self.children[digit] = Some(node);
+                    }
+                }
+            },
+            None =>
+                return
         }
     }
 
-    pub fn contains(&self, digits: [u8]) -> bool {
-        let (head, tail) = digits.split_at(1);
-        let digit = head[0];
-        // TODO check if this node is "full"
-        match self.children[digit] {
-            Some(node) =>
-                node.contains(tail),
-            None => {
-                false
-            }
+    pub fn contains(&self, mut digits: Vec<usize>) -> bool {
+        match digits.pop() {
+            Some(digit) => {
+                // TODO check if this node is "full"
+                match &self.children[digit] {
+                    Some(node) =>
+                        node.contains(digits),
+                    None => {
+                        false
+                    }
+                }
+            },
+            None =>
+                true
         }
     }
 }
@@ -80,7 +89,7 @@ impl HTree {
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = hex.base_cell_number();
 
-        match self.nodes.get(&base_cell) {
+        match &self.nodes.get(&base_cell) {
             Some(node) => node.insert(parse_h3cell(hex)),
             None => {
                 let mut node = Node::new();
