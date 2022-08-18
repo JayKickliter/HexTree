@@ -5,6 +5,7 @@ edition = "2021"
 
 [dev-dependencies]
 byteorder = "*"
+geo-types = "*"
 
 [dependencies]
 h3ron = { version = "0.14.0" }

@@ -31,7 +31,12 @@ impl Node {
     pub fn insert(&mut self, hex: H3Cell) {
         assert!(hex.resolution() > self.resolution() || hex == self.hex);
         // hex reinterpreted at the same resolution of self.children
-        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
+        let promoted = if hex.resolution() == self.resolution() + 1 {
+            hex
+        } else {
+            hex.get_parent(self.resolution() + 1).unwrap()
+        };
+
         if self.hex == hex {
             // We're inserting a hex that covers all possible
             // children, therefore we can coalesce.
@@ -41,13 +46,17 @@ impl Node {
                 Ok(pos) => children[pos].insert(hex),
                 Err(pos) => {
                     let mut node = Node::new(promoted);
-                    node.insert(hex);
+                    if promoted != hex {
+                        node.insert(hex);
+                    }
                     children.insert(pos, node)
                 }
             }
         } else {
             let mut node = Node::new(promoted);
-            node.insert(hex);
+            if promoted != hex {
+                node.insert(hex);
+            }
             self.children = Some(vec![node])
         }
     }
@@ -97,14 +106,20 @@ impl HTree {
 
     pub fn insert(&mut self, hex: H3Cell) {
         assert!(hex.resolution() >= self.root_res);
-        let promoted = hex.get_parent(self.root_res).unwrap();
+        let promoted = if hex.resolution() == self.root_res {
+            hex
+        } else {
+            hex.get_parent(self.root_res).unwrap()
+        };
         match self.nodes.binary_search_by_key(&promoted, |node| node.hex) {
             Ok(pos) => {
                 self.nodes[pos].insert(hex);
             }
             Err(pos) => {
                 let mut node = Node::new(promoted);
-                node.insert(hex);
+                if hex.resolution() > self.root_res {
+                    node.insert(hex);
+                }
                 self.nodes.insert(pos, node);
             }
         }
@@ -125,6 +140,7 @@ impl HTree {
 mod tests {
     use super::*;
     use byteorder::{ReadBytesExt, LE};
+    use geo_types::coord;
     use std::io::Cursor;
 
     static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
@@ -141,15 +157,20 @@ mod tests {
             hexagons.push(cell);
         }
         assert!(!hexagons.is_empty());
-        println!("{} {}", hexagons.len(), base_res);
 
-        let _tree = {
+        let tree = {
             let mut tree = HTree::new(base_res);
-            for (i, hex) in hexagons.into_iter().enumerate() {
-                println!("{}: {:?}", i, hex);
+            for hex in hexagons.into_iter() {
                 tree.insert(hex);
             }
             tree
         };
+
+        let tarpon_springs =
+            H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 7).unwrap();
+        let gulf_of_mexico =
+            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 7).unwrap();
+        assert!(tree.contains(tarpon_springs));
+        assert!(!tree.contains(gulf_of_mexico));
     }
 }
