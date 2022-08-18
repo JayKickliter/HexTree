@@ -22,7 +22,7 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
         return Vec::new();
     }
 
-    (0..(resolution - 1))
+    (0..resolution)
         .into_iter()
         .rev()
         .map(|r| {
@@ -45,7 +45,7 @@ impl Node {
     pub fn new() -> Self {
         Self {
             children: Box::new([None, None, None, None, None, None, None]),
-            full: false
+            full: false,
         }
     }
 
@@ -69,18 +69,17 @@ impl Node {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match self.children[digit].as_mut() {
-                    Some(node) =>
-                        node.insert(digits),
+                    Some(node) => node.insert(digits),
                     None => {
                         let mut node = Node::new();
                         node.insert(digits);
                         self.children[digit] = Some(node);
                     }
                 }
-            },
+            }
             None => {
                 self.full = true;
-                return
+                return;
             }
         }
     }
@@ -88,7 +87,7 @@ impl Node {
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
         if self.full {
             //println!("full {:?}", digits);
-            return true
+            return true;
         }
 
         //println!("checking {:?}", digits);
@@ -99,15 +98,14 @@ impl Node {
                     Some(node) => {
                         //println!("had node");
                         node.contains(digits)
-                    },
+                    }
                     None => {
                         //println!("no node {:?}", self.children);
                         false
                     }
                 }
-            },
-            None =>
-                true
+            }
+            None => true,
         }
     }
 }
@@ -141,7 +139,7 @@ impl HTree {
         let base_cell = hex.base_cell_number();
         match self.nodes.get(&base_cell) {
             Some(node) => node.contains(parse_h3cell(hex)),
-            None => false
+            None => false,
         }
     }
 }
@@ -175,7 +173,6 @@ mod tests {
             tree
         }
 
-
         let us915 = from_array(&hexagons);
 
         assert_eq!(us915.len(), hexagons.len());
@@ -192,10 +189,7 @@ mod tests {
         assert!(!us915.contains(gulf_of_mexico));
         assert!(!us915.contains(paris));
 
-        println!(
-            "new from us915: {}",
-            bench(|| from_array(&hexagons))
-        );
+        println!("new from us915: {}", bench(|| from_array(&hexagons)));
         println!(
             "us915.contains(tarpon_springs): {}",
             bench(|| us915.contains(tarpon_springs))
