@@ -30,7 +30,7 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
         let offset = 0x2a - ( 3 * r);
         let digit = (index >> offset) & 0b111;
         //println!("offset {} digit {} resolution {}", offset, digit, r+1);
-        //assert!(digit >= 0 && digit < 7);
+        assert!(digit >= 0 && digit < 7);
         children.push(digit as usize);
     }
     children.reverse();
@@ -40,17 +40,22 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 struct Node {
+    full: bool,
     children: Box<[Option<Node>; 7]>,
 }
 
 impl Node {
     pub fn new() -> Self {
         Self {
-            children: Box::new([None, None, None, None, None, None, None])
+            children: Box::new([None, None, None, None, None, None, None]),
+            full: false
         }
     }
 
     pub fn insert(&mut self, mut digits: Vec<usize>) {
+        if self.full {
+            return;
+        }
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
@@ -64,29 +69,31 @@ impl Node {
                     }
                 }
             },
-            None =>
+            None => {
+                self.full = true;
                 return
+            }
         }
     }
 
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
         let full = self.children.iter().all(|c| c.is_none());
-        if full {
-            println!("full {:?}", digits);
+        if self.full {
+            //println!("full {:?}", digits);
             return true
         }
 
-        println!("checking {:?}", digits);
+        //println!("checking {:?}", digits);
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match &self.children[digit] {
                     Some(node) => {
-                        println!("had node");
+                        //println!("had node");
                         node.contains(digits)
                     },
                     None => {
-                        println!("no node {:?}", self.children);
+                        //println!("no node {:?}", self.children);
                         false
                     }
                 }
