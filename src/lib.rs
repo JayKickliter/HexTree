@@ -70,17 +70,23 @@ impl Node {
     }
 
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
-        let full = self.children.iter().all(|c| c.is_some());
+        let full = self.children.iter().all(|c| c.is_none());
         if full {
+            println!("full {:?}", digits);
             return true
         }
+
+        println!("checking {:?}", digits);
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match &self.children[digit] {
-                    Some(node) =>
-                        node.contains(digits),
+                    Some(node) => {
+                        println!("had node");
+                        node.contains(digits)
+                    },
                     None => {
+                        println!("no node {:?}", self.children);
                         false
                     }
                 }
@@ -158,9 +164,10 @@ mod tests {
             H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 12).unwrap();
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
-        println!("tarpon springs: {:?}", parse_h3cell(tarpon_springs));
+        //println!("tarpon springs: {:?}", parse_h3cell(tarpon_springs));
         assert!(us915.contains(tarpon_springs));
-        //assert!(!us915.contains(gulf_of_mexico));
+        //println!("tarpon springs: {:?}", parse_h3cell(gulf_of_mexico));
+        assert!(!us915.contains(gulf_of_mexico));
         assert!(!us915.contains(paris));
 
         println!(
