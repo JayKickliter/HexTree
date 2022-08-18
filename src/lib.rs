@@ -18,23 +18,20 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
     let index = hex.h3index();
     let resolution = hex.resolution();
 
-    let mut children = Vec::new();
-
     if resolution == 0 {
-        return children;
+        return Vec::new();
     }
 
-    //println!("hex resolution {}", resolution);
-
-    for r in 0..(resolution - 1) {
-        let offset = 0x2a - ( 3 * r);
-        let digit = (index >> offset) & 0b111;
-        //println!("offset {} digit {} resolution {}", offset, digit, r+1);
-        assert!(digit >= 0 && digit < 7);
-        children.push(digit as usize);
-    }
-    children.reverse();
-    return children;
+    (0..(resolution - 1))
+        .into_iter()
+        .rev()
+        .map(|r| {
+            let offset = 0x2a - (3 * r);
+            let digit = (index >> offset) & 0b111;
+            assert!(digit < 7);
+            digit as usize
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -77,7 +74,6 @@ impl Node {
     }
 
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
-        let full = self.children.iter().all(|c| c.is_none());
         if self.full {
             //println!("full {:?}", digits);
             return true
