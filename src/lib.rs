@@ -159,33 +159,38 @@ mod tests {
         }
         assert!(!hexagons.is_empty());
 
-        let tree = {
+        fn from_array(cells: &[H3Cell], base_res: u8) -> HTree {
             let mut tree = HTree::new(base_res);
-            for hex in hexagons.into_iter() {
-                tree.insert(hex);
+            for cell in cells.into_iter() {
+                tree.insert(*cell);
             }
             tree
-        };
+        }
+
+        let us915 = from_array(&hexagons, base_res);
 
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
         let gulf_of_mexico =
             H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 12).unwrap();
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
-        assert!(tree.contains(tarpon_springs));
-        assert!(!tree.contains(gulf_of_mexico));
-        assert!(!tree.contains(paris));
+
+        assert!(us915.contains(tarpon_springs));
+        assert!(!us915.contains(gulf_of_mexico));
+        assert!(!us915.contains(paris));
+
         println!(
-            "tree.contains(tarpon_springs): {}",
-            bench(|| tree.contains(tarpon_springs))
+            "new from us915: {}",
+            bench(|| from_array(&hexagons, base_res))
         );
         println!(
-            "tree.contains(gulf_of_mexico): {}",
-            bench(|| tree.contains(tarpon_springs))
+            "us915.contains(tarpon_springs): {}",
+            bench(|| us915.contains(tarpon_springs))
         );
         println!(
-            "tree.contains(gulf_of_mexico): {}",
-            bench(|| tree.contains(paris))
+            "us915.contains(gulf_of_mexico): {}",
+            bench(|| us915.contains(tarpon_springs))
         );
+        println!("us915.contains(paris): {}", bench(|| us915.contains(paris)));
     }
 }
