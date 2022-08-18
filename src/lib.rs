@@ -29,15 +29,26 @@ impl Node {
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
-        assert!(self.hex.resolution() >= hex.resolution());
-        // Are we inserting a hex that covers all possible children?
-        // If so, get rid of the children.
+        assert!(hex.resolution() > self.resolution() || hex == self.hex);
+        // hex reinterpreted at the same resolution of self.children
+        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
         if self.hex == hex {
-            self.children = None;
-            return;
-        }
-        if self.children.is_none() {
-            self.children = Some(Vec::with_capacity(1));
+            // We're inserting a hex that covers all possible
+            // children, therefore we can coalesce.
+            self.children = None
+        } else if let Some(children) = self.children.as_mut() {
+            match children.binary_search_by_key(&promoted, |node| node.hex) {
+                Ok(pos) => children[pos].insert(hex),
+                Err(pos) => {
+                    let mut node = Node::new(promoted);
+                    node.insert(hex);
+                    children.insert(pos, node)
+                }
+            }
+        } else {
+            let mut node = Node::new(promoted);
+            node.insert(hex);
+            self.children = Some(vec![node])
         }
     }
 
@@ -48,27 +59,29 @@ impl Node {
     pub fn contains(&self, hex: H3Cell) -> bool {
         assert!(!(hex == self.hex && !self.children.is_none()));
         assert!(hex.resolution() >= self.hex.resolution());
-        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
+
+        if !self.hex.is_parent_of(&hex) {
+            // Simplest case: hex is outside of self
+            return false;
+        }
 
         if self.children.is_none() {
-            hex == self.hex
-        } else if promoted == hex {
-            self.children
-                .as_ref()
-                .unwrap()
-                .binary_search_by_key(&promoted, |node| node.hex)
-                .is_ok()
+            // self is a leaf node, and we already know self is a
+            // parent, therefore hex is a member
+            return true;
+        }
+
+        // hex reinterpreted at the same resolution of self.children
+        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
+        if let Ok(pos) = self
+            .children
+            .as_ref()
+            .expect("already checked !is_none()")
+            .binary_search_by_key(&promoted, |node| node.hex)
+        {
+            self.children.as_ref().expect("already checked !is_none()")[pos].contains(hex)
         } else {
-            if let Ok(pos) = self
-                .children
-                .as_ref()
-                .unwrap()
-                .binary_search_by_key(&promoted, |node| node.hex)
-            {
-                self.children.as_ref().unwrap()[pos].contains(hex)
-            } else {
-                false
-            }
+            false
         }
     }
 }
