@@ -167,6 +167,25 @@ mod tests {
             tree
         }
 
+        fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
+            let promotions = (0..16)
+                .into_iter()
+                .map(|res| {
+                    if res < target.resolution() {
+                        target.get_parent(res).unwrap()
+                    } else {
+                        target
+                    }
+                })
+                .collect::<Vec<H3Cell>>();
+            for &cell in region {
+                if cell == promotions[cell.resolution() as usize] {
+                    return true;
+                }
+            }
+            false
+        }
+
         let us915 = from_array(&hexagons, base_res);
 
         let tarpon_springs =
@@ -176,20 +195,35 @@ mod tests {
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
         assert!(us915.contains(tarpon_springs));
+        assert!(naive_contains(&hexagons, tarpon_springs));
         assert!(!us915.contains(gulf_of_mexico));
+        assert!(!naive_contains(&hexagons, gulf_of_mexico));
         assert!(!us915.contains(paris));
+        assert!(!naive_contains(&hexagons, paris));
 
         println!(
             "new from us915: {}",
             bench(|| from_array(&hexagons, base_res))
         );
         println!(
+            "naive_contains(&hexagons, tarpon_springs): {}",
+            bench(|| naive_contains(&hexagons, tarpon_springs))
+        );
+        println!(
             "us915.contains(tarpon_springs): {}",
             bench(|| us915.contains(tarpon_springs))
         );
         println!(
+            "naive_contains(&hexagons, gulf_of_mexico): {}",
+            bench(|| naive_contains(&hexagons, gulf_of_mexico))
+        );
+        println!(
             "us915.contains(gulf_of_mexico): {}",
             bench(|| us915.contains(tarpon_springs))
+        );
+        println!(
+            "naive_contains(&hexagons, paris): {}",
+            bench(|| naive_contains(&hexagons, paris))
         );
         println!("us915.contains(paris): {}", bench(|| us915.contains(paris)));
     }
