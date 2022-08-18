@@ -2,136 +2,99 @@ pub use h3ron;
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// An HTree is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 pub struct HTree {
-    /// First level, and coarsest, H3 resolution of the tree.
-    root_res: u8,
-    nodes: Vec<Node>,
+    /// All h3 0 base cell indices in the tree
+    nodes: HashMap<u8, Node>,
+}
+
+// get all the Digits out of the cell
+fn parse_h3cell(hex: H3Cell) -> [u32] {
+    let index = hex.h3index();
+    let resolution = hex.resolution();
+
+    let mut children = [];
+
+    for r in 0..(resolution - 1) {
+        let offset = 0x2a + ( 3 * r);
+        children[r] = (index >> offset) & 0b111;
+    }
+    return children;
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 struct Node {
-    hex: H3Cell,
-    children: Option<Vec<Node>>,
+    children: Box<[Option<Node>; 7]>,
 }
 
 impl Node {
-    pub fn new(hex: H3Cell) -> Self {
+    pub fn new() -> Self {
         Self {
-            hex,
-            children: None,
+            children: Box::new([None, None, None, None, None, None, None])
         }
     }
 
-    pub fn insert(&mut self, hex: H3Cell) {
-        assert!(hex.resolution() > self.resolution() || hex == self.hex);
-        // hex reinterpreted at the same resolution of self.children
-        let promoted = if hex.resolution() == self.resolution() + 1 {
-            hex
-        } else {
-            hex.get_parent(self.resolution() + 1).unwrap()
-        };
-
-        if self.hex == hex {
-            // We're inserting a hex that covers all possible
-            // children, therefore we can coalesce.
-            self.children = None
-        } else if let Some(children) = self.children.as_mut() {
-            match children.binary_search_by_key(&promoted, |node| node.hex) {
-                Ok(pos) => children[pos].insert(hex),
-                Err(pos) => {
-                    let mut node = Node::new(promoted);
-                    if promoted != hex {
-                        node.insert(hex);
-                    }
-                    children.insert(pos, node)
-                }
+    pub fn insert(&mut self, digits: [u8]) {
+        let (head, tail) = digits.split_at(1);
+        let digit = head[0];
+        // TODO check if this node is "full"
+        match self.children[digit] {
+            Some(node) =>
+                node.insert(tail),
+            None => {
+                let node = Node::new();
+                node.insert(tail);
+                self.children[digit] = node;
             }
-        } else {
-            let mut node = Node::new(promoted);
-            if promoted != hex {
-                node.insert(hex);
+        }
+    }
+
+    pub fn contains(&self, digits: [u8]) -> bool {
+        let (head, tail) = digits.split_at(1);
+        let digit = head[0];
+        // TODO check if this node is "full"
+        match self.children[digit] {
+            Some(node) =>
+                node.contains(tail),
+            None => {
+                false
             }
-            self.children = Some(vec![node])
-        }
-    }
-
-    pub fn resolution(&self) -> u8 {
-        self.hex.resolution()
-    }
-
-    pub fn contains(&self, hex: H3Cell) -> bool {
-        assert!(hex != self.hex || self.children.is_none());
-        assert!(hex.resolution() >= self.hex.resolution());
-
-        if !self.hex.is_parent_of(&hex) {
-            // Simplest case: hex is outside of self
-            return false;
-        }
-
-        if self.children.is_none() {
-            // self is a leaf node, and we already know self is a
-            // parent, therefore hex is a member
-            return true;
-        }
-
-        // hex reinterpreted at the same resolution of self.children
-        let promoted = hex.get_parent(self.resolution() + 1).unwrap();
-        if let Ok(pos) = self
-            .children
-            .as_ref()
-            .expect("already checked !is_none()")
-            .binary_search_by_key(&promoted, |node| node.hex)
-        {
-            self.children.as_ref().expect("already checked !is_none()")[pos].contains(hex)
-        } else {
-            false
         }
     }
 }
 
 impl HTree {
     /// Create a new HTree with given root resolution.
-    pub fn new(root_res: u8) -> Self {
+    pub fn new() -> Self {
         Self {
-            root_res,
-            nodes: Vec::new(),
+            nodes: HashMap::new(),
         }
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
-        assert!(hex.resolution() >= self.root_res);
-        let promoted = if hex.resolution() == self.root_res {
-            hex
-        } else {
-            hex.get_parent(self.root_res).unwrap()
-        };
-        match self.nodes.binary_search_by_key(&promoted, |node| node.hex) {
-            Ok(pos) => {
-                self.nodes[pos].insert(hex);
-            }
-            Err(pos) => {
-                let mut node = Node::new(promoted);
-                if hex.resolution() > self.root_res {
-                    node.insert(hex);
-                }
-                self.nodes.insert(pos, node);
+        let base_cell = hex.base_cell_number();
+
+        match self.nodes.get(&base_cell) {
+            Some(node) => node.insert(parse_h3cell(hex)),
+            None => {
+                let mut node = Node::new();
+                node.insert(parse_h3cell(hex));
+                self.nodes.insert(base_cell, node);
             }
         }
     }
 
     pub fn contains(&self, hex: H3Cell) -> bool {
-        assert!(hex.resolution() >= self.root_res);
-        let promoted = hex.get_parent(self.root_res).unwrap();
-        if let Ok(pos) = self.nodes.binary_search_by_key(&promoted, |node| node.hex) {
-            self.nodes[pos].contains(hex)
-        } else {
-            false
+        let base_cell = hex.base_cell_number();
+        match self.nodes.get(&base_cell) {
+            Some(node) => node.contains(parse_h3cell(hex)),
+            None => false
         }
     }
 }
@@ -151,23 +114,21 @@ mod tests {
         let mut hexagons: Vec<H3Cell> =
             Vec::with_capacity(US915_SERIALIZED.len() / std::mem::size_of::<H3Cell>());
         let mut csr = Cursor::new(US915_SERIALIZED);
-        let mut base_res = u8::MAX;
         while let Ok(raw_index) = csr.read_u64::<LE>() {
             let cell = H3Cell::try_from(raw_index).unwrap();
-            base_res = std::cmp::min(base_res, cell.resolution());
             hexagons.push(cell);
         }
         assert!(!hexagons.is_empty());
 
-        fn from_array(cells: &[H3Cell], base_res: u8) -> HTree {
-            let mut tree = HTree::new(base_res);
+        fn from_array(cells: &[H3Cell]) -> HTree {
+            let mut tree = HTree::new();
             for cell in cells.into_iter() {
                 tree.insert(*cell);
             }
             tree
         }
 
-        let us915 = from_array(&hexagons, base_res);
+        let us915 = from_array(&hexagons);
 
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
@@ -181,7 +142,7 @@ mod tests {
 
         println!(
             "new from us915: {}",
-            bench(|| from_array(&hexagons, base_res))
+            bench(|| from_array(&hexagons))
         );
         println!(
             "us915.contains(tarpon_springs): {}",
