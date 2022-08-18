@@ -140,6 +140,7 @@ impl HTree {
 mod tests {
     use super::*;
     use byteorder::{ReadBytesExt, LE};
+    use easybench::bench;
     use geo_types::coord;
     use std::io::Cursor;
 
@@ -167,10 +168,24 @@ mod tests {
         };
 
         let tarpon_springs =
-            H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 7).unwrap();
+            H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
         let gulf_of_mexico =
-            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 7).unwrap();
+            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 12).unwrap();
+        let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
         assert!(tree.contains(tarpon_springs));
         assert!(!tree.contains(gulf_of_mexico));
+        assert!(!tree.contains(paris));
+        println!(
+            "tree.contains(tarpon_springs): {}",
+            bench(|| tree.contains(tarpon_springs))
+        );
+        println!(
+            "tree.contains(gulf_of_mexico): {}",
+            bench(|| tree.contains(tarpon_springs))
+        );
+        println!(
+            "tree.contains(gulf_of_mexico): {}",
+            bench(|| tree.contains(paris))
+        );
     }
 }

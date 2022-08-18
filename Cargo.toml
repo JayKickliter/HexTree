@@ -5,6 +5,7 @@ edition = "2021"
 
 [dev-dependencies]
 byteorder = "*"
+easybench = "1"
 geo-types = "*"
 
 [dependencies]
