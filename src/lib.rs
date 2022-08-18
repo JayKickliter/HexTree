@@ -2,7 +2,7 @@ pub use h3ron;
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// An HTree is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 pub struct HTree {
     /// All h3 0 base cell indices in the tree
-    nodes: HashMap<u8, Node>,
+    nodes: BTreeMap<u8, Node>,
 }
 
 // get all the Digits out of the cell
@@ -46,6 +46,18 @@ impl Node {
         Self {
             children: Box::new([None, None, None, None, None, None, None]),
             full: false
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        if self.full {
+            return 1;
+        } else {
+            self.children
+                .iter()
+                .flatten()
+                .map(|child| child.len())
+                .sum()
         }
     }
 
@@ -104,8 +116,12 @@ impl HTree {
     /// Create a new HTree with given root resolution.
     pub fn new() -> Self {
         Self {
-            nodes: HashMap::new(),
+            nodes: BTreeMap::new(),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.nodes.values().map(|node| node.len()).sum()
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
@@ -159,7 +175,10 @@ mod tests {
             tree
         }
 
+
         let us915 = from_array(&hexagons);
+
+        assert_eq!(us915.len(), hexagons.len());
 
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
