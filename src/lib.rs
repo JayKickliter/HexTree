@@ -158,6 +158,18 @@ mod tests {
     use geo_types::coord;
     use std::io::Cursor;
 
+    static AS923_1_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1.res7.h3idx");
+    static AS923_1B_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1B.res7.h3idx");
+    static AS923_2_SERIALIZED: &[u8] = include_bytes!("../test/AS923-2.res7.h3idx");
+    static AS923_3_SERIALIZED: &[u8] = include_bytes!("../test/AS923-3.res7.h3idx");
+    static AS923_4_SERIALIZED: &[u8] = include_bytes!("../test/AS923-4.res7.h3idx");
+    static AU915_SERIALIZED: &[u8] = include_bytes!("../test/AU915.res7.h3idx");
+    static CN470_SERIALIZED: &[u8] = include_bytes!("../test/CN470.res7.h3idx");
+    static EU433_SERIALIZED: &[u8] = include_bytes!("../test/EU433.res7.h3idx");
+    static EU868_SERIALIZED: &[u8] = include_bytes!("../test/EU868.res7.h3idx");
+    static IN865_SERIALIZED: &[u8] = include_bytes!("../test/IN865.res7.h3idx");
+    static KR920_SERIALIZED: &[u8] = include_bytes!("../test/KR920.res7.h3idx");
+    static RU864_SERIALIZED: &[u8] = include_bytes!("../test/RU864.res7.h3idx");
     static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
 
     /// Perform a linear search of `region` for `target` cell.
@@ -180,28 +192,32 @@ mod tests {
         false
     }
 
-    #[test]
-    fn all_up() {
+    fn from_array(cells: &[H3Cell]) -> HTree {
+        let mut tree = HTree::new();
+        for cell in cells.iter() {
+            tree.insert(*cell);
+        }
+        tree
+    }
+
+    fn from_serialized(serialized: &[u8]) -> (HTree, Vec<H3Cell>) {
         let mut hexagons: Vec<H3Cell> =
-            Vec::with_capacity(US915_SERIALIZED.len() / std::mem::size_of::<H3Cell>());
-        let mut csr = Cursor::new(US915_SERIALIZED);
+            Vec::with_capacity(serialized.len() / std::mem::size_of::<H3Cell>());
+        let mut csr = Cursor::new(serialized);
         while let Ok(raw_index) = csr.read_u64::<LE>() {
             let cell = H3Cell::try_from(raw_index).unwrap();
             hexagons.push(cell);
         }
         assert!(!hexagons.is_empty());
+        let tree = from_array(&hexagons);
+        (tree, hexagons)
+    }
 
-        fn from_array(cells: &[H3Cell]) -> HTree {
-            let mut tree = HTree::new();
-            for cell in cells.iter() {
-                tree.insert(*cell);
-            }
-            tree
-        }
+    #[test]
+    fn all_up() {
+        let (us915_tree, us915_cells) = from_serialized(US915_SERIALIZED);
 
-        let us915 = from_array(&hexagons);
-
-        assert_eq!(us915.len(), hexagons.len());
+        assert_eq!(us915_tree.len(), us915_cells.len());
 
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
@@ -209,43 +225,77 @@ mod tests {
             H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 12).unwrap();
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
-        assert!(us915.contains(tarpon_springs));
-        assert!(naive_contains(&hexagons, tarpon_springs));
+        assert!(us915_tree.contains(tarpon_springs));
+        assert!(naive_contains(&us915_cells, tarpon_springs));
 
-        assert!(!us915.contains(gulf_of_mexico));
-        assert!(!naive_contains(&hexagons, gulf_of_mexico));
+        assert!(!us915_tree.contains(gulf_of_mexico));
+        assert!(!naive_contains(&us915_cells, gulf_of_mexico));
 
-        assert!(!us915.contains(paris));
-        assert!(!naive_contains(&hexagons, paris));
+        assert!(!us915_tree.contains(paris));
+        assert!(!naive_contains(&us915_cells, paris));
 
-        assert!(hexagons.iter().all(|cell| us915.contains(*cell)));
+        assert!(us915_cells.iter().all(|cell| us915_tree.contains(*cell)));
 
-        println!("new from us915: {}", bench(|| from_array(&hexagons)));
+        println!("new from us915: {}", bench(|| from_array(&us915_cells)));
         println!(
-            "naive_contains(&hexagons, tarpon_springs): {}",
-            bench(|| naive_contains(&hexagons, tarpon_springs))
+            "naive_contains(&us915_cells, tarpon_springs): {}",
+            bench(|| naive_contains(&us915_cells, tarpon_springs))
         );
         println!(
             "us915.contains(tarpon_springs): {}",
-            bench(|| us915.contains(tarpon_springs))
+            bench(|| us915_tree.contains(tarpon_springs))
         );
         println!(
-            "naive_contains(&hexagons, gulf_of_mexico): {}",
-            bench(|| naive_contains(&hexagons, gulf_of_mexico))
+            "naive_contains(&us915_cells, gulf_of_mexico): {}",
+            bench(|| naive_contains(&us915_cells, gulf_of_mexico))
         );
         println!(
             "us915.contains(gulf_of_mexico): {}",
-            bench(|| us915.contains(tarpon_springs))
+            bench(|| us915_tree.contains(tarpon_springs))
         );
         println!(
-            "naive_contains(&hexagons, paris): {}",
-            bench(|| naive_contains(&hexagons, paris))
+            "naive_contains(&us915_cells, paris): {}",
+            bench(|| naive_contains(&us915_cells, paris))
         );
-        println!("us915.contains(paris): {}", bench(|| us915.contains(paris)));
+        println!(
+            "us915.contains(paris): {}",
+            bench(|| us915_tree.contains(paris))
+        );
 
         println!(
-            "hexagons.iter().all(|cell| us915.contains(*cell)): {}",
-            bench(|| hexagons.iter().all(|cell| us915.contains(*cell)))
+            "us915_cells.iter().all(|cell| us915.contains(*cell)): {}",
+            bench(|| us915_cells.iter().all(|cell| us915_tree.contains(*cell)))
         );
+    }
+
+    #[test]
+    fn all_regions() {
+        let regions = &[
+            ("AS923_1", from_serialized(AS923_1_SERIALIZED)),
+            ("AS923_1B", from_serialized(AS923_1B_SERIALIZED)),
+            ("AS923_2", from_serialized(AS923_2_SERIALIZED)),
+            ("AS923_3", from_serialized(AS923_3_SERIALIZED)),
+            ("AS923_4", from_serialized(AS923_4_SERIALIZED)),
+            ("AU915", from_serialized(AU915_SERIALIZED)),
+            ("CN470", from_serialized(CN470_SERIALIZED)),
+            ("EU433", from_serialized(EU433_SERIALIZED)),
+            ("EU868", from_serialized(EU868_SERIALIZED)),
+            ("IN865", from_serialized(IN865_SERIALIZED)),
+            ("KR920", from_serialized(KR920_SERIALIZED)),
+            ("RU864", from_serialized(RU864_SERIALIZED)),
+            ("US915", from_serialized(US915_SERIALIZED)),
+        ];
+
+        // Do membership tests across the cartesian product off all regions
+        for (name_a, (tree_a, cells_a)) in regions.iter() {
+            for (name_b, (_tree_b, cells_b)) in regions.iter() {
+                if name_a == name_b {
+                    assert_eq!(tree_a.len(), cells_a.len());
+                    assert!(cells_a.iter().all(|cell| tree_a.contains(*cell)));
+                } else {
+                    assert!(!cells_b.iter().any(|cell| tree_a.contains(*cell)));
+                }
+            }
+        }
     }
 }
