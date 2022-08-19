@@ -1,13 +1,13 @@
-pub use h3ron;
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
+use std::mem::size_of;
 
-/// An HTree is a b(ish)-tree-like structure of hierarchical H3
+/// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
-pub struct HTree {
+pub struct HexSet {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node>]>,
 }
@@ -25,13 +25,23 @@ fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 struct Node {
     children: Box<[Option<Node>; 7]>,
 }
 
 impl Node {
+    pub fn mem_size(&self) -> usize {
+        size_of::<Self>()
+            + self
+                .children
+                .iter()
+                .flatten()
+                .map(|n| n.mem_size())
+                .sum::<usize>()
+    }
+
     pub fn new() -> Self {
         Self {
             children: Box::new([None, None, None, None, None, None, None]),
@@ -86,8 +96,8 @@ impl Node {
     }
 }
 
-impl HTree {
-    /// Create a new HTree with given root resolution.
+impl HexSet {
+    /// Create a new `HTree` with given root resolution.
     pub fn new() -> Self {
         Self {
             nodes: vec![None; 128].into_boxed_slice(),
@@ -129,11 +139,25 @@ impl HTree {
             None => false,
         }
     }
+
+    /// Returns the current memory use of this `HexSet`.
+    ///
+    /// Note: due to memory alignment, the actual total may be higher
+    ///       than reported.
+    pub fn mem_size(&self) -> usize {
+        size_of::<Self>()
+            + self
+                .nodes
+                .iter()
+                .flatten()
+                .map(|n| n.mem_size())
+                .sum::<usize>()
+    }
 }
 
-impl Default for HTree {
+impl Default for HexSet {
     fn default() -> Self {
-        HTree::new()
+        HexSet::new()
     }
 }
 
@@ -179,15 +203,15 @@ mod tests {
         false
     }
 
-    fn from_array(cells: &[H3Cell]) -> HTree {
-        let mut tree = HTree::new();
+    fn from_array(cells: &[H3Cell]) -> HexSet {
+        let mut tree = HexSet::new();
         for cell in cells.iter() {
             tree.insert(*cell);
         }
         tree
     }
 
-    fn from_serialized(serialized: &[u8]) -> (HTree, Vec<H3Cell>) {
+    fn from_serialized(serialized: &[u8]) -> (HexSet, Vec<H3Cell>) {
         let mut hexagons: Vec<H3Cell> =
             Vec::with_capacity(serialized.len() / std::mem::size_of::<H3Cell>());
         let mut csr = Cursor::new(serialized);
