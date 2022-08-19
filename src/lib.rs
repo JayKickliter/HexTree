@@ -26,7 +26,7 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
 
     //println!("hex resolution {}", resolution);
 
-    for r in 0..(resolution - 1) {
+    for r in 0..resolution {
         let offset = 0x2a - ( 3 * r);
         let digit = (index >> offset) & 0b111;
         //println!("offset {} digit {} resolution {}", offset, digit, r+1);
@@ -40,7 +40,6 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 struct Node {
-    full: bool,
     children: Box<[Option<Node>; 7]>,
 }
 
@@ -48,14 +47,10 @@ impl Node {
     pub fn new() -> Self {
         Self {
             children: Box::new([None, None, None, None, None, None, None]),
-            full: false
         }
     }
 
     pub fn insert(&mut self, mut digits: Vec<usize>) {
-        if self.full {
-            return;
-        }
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
@@ -70,7 +65,6 @@ impl Node {
                 }
             },
             None => {
-                self.full = true;
                 return
             }
         }
@@ -78,7 +72,7 @@ impl Node {
 
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
         let full = self.children.iter().all(|c| c.is_none());
-        if self.full {
+        if full {
             //println!("full {:?}", digits);
             return true
         }
