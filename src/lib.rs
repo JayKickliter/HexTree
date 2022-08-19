@@ -18,23 +18,20 @@ fn parse_h3cell(hex: H3Cell) -> Vec<usize> {
     let index = hex.h3index();
     let resolution = hex.resolution();
 
-    let mut children = Vec::new();
-
     if resolution == 0 {
-        return children;
+        return Vec::new();
     }
 
-    //println!("hex resolution {}", resolution);
-
-    for r in 0..resolution {
-        let offset = 0x2a - ( 3 * r);
-        let digit = (index >> offset) & 0b111;
-        //println!("offset {} digit {} resolution {}", offset, digit, r+1);
-        assert!(digit >= 0 && digit < 7);
-        children.push(digit as usize);
-    }
-    children.reverse();
-    return children;
+    (0..resolution)
+        .into_iter()
+        .rev()
+        .map(|r| {
+            let offset = 0x2a - (3 * r);
+            let digit = (index >> offset) & 0b111;
+            assert!(digit < 7);
+            digit as usize
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -50,50 +47,53 @@ impl Node {
         }
     }
 
+    pub fn len(&self) -> usize {
+        if self.is_full() {
+            1
+        } else {
+            self.children
+                .iter()
+                .flatten()
+                .map(|child| child.len())
+                .sum()
+        }
+    }
+
     pub fn insert(&mut self, mut digits: Vec<usize>) {
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match self.children[digit].as_mut() {
-                    Some(node) =>
-                        node.insert(digits),
+                    Some(node) => node.insert(digits),
                     None => {
                         let mut node = Node::new();
                         node.insert(digits);
                         self.children[digit] = Some(node);
                     }
                 }
-            },
-            None => {
-                return
             }
+            None => (),
         }
     }
 
+    pub fn is_full(&self) -> bool {
+        self.children.iter().all(|c| c.is_none())
+    }
+
     pub fn contains(&self, mut digits: Vec<usize>) -> bool {
-        let full = self.children.iter().all(|c| c.is_none());
-        if full {
-            //println!("full {:?}", digits);
-            return true
+        if self.is_full() {
+            return true;
         }
 
-        //println!("checking {:?}", digits);
         match digits.pop() {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match &self.children[digit] {
-                    Some(node) => {
-                        //println!("had node");
-                        node.contains(digits)
-                    },
-                    None => {
-                        //println!("no node {:?}", self.children);
-                        false
-                    }
+                    Some(node) => node.contains(digits),
+                    None => false,
                 }
-            },
-            None =>
-                true
+            }
+            None => true,
         }
     }
 }
@@ -104,6 +104,14 @@ impl HTree {
         Self {
             nodes: HashMap::new(),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.nodes.values().map(|node| node.len()).sum()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
@@ -123,8 +131,14 @@ impl HTree {
         let base_cell = hex.base_cell_number();
         match self.nodes.get(&base_cell) {
             Some(node) => node.contains(parse_h3cell(hex)),
-            None => false
+            None => false,
         }
+    }
+}
+
+impl Default for HTree {
+    fn default() -> Self {
+        HTree::new()
     }
 }
 
@@ -137,6 +151,26 @@ mod tests {
     use std::io::Cursor;
 
     static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
+
+    /// Perform a linear search of `region` for `target` cell.
+    fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
+        let promotions = (0..16)
+            .into_iter()
+            .map(|res| {
+                if res < target.resolution() {
+                    target.get_parent(res).unwrap()
+                } else {
+                    target
+                }
+            })
+            .collect::<Vec<H3Cell>>();
+        for &cell in region {
+            if cell == promotions[cell.resolution() as usize] {
+                return true;
+            }
+        }
+        false
+    }
 
     #[test]
     fn all_up() {
@@ -157,26 +191,9 @@ mod tests {
             tree
         }
 
-        fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
-            let promotions = (0..16)
-                .into_iter()
-                .map(|res| {
-                    if res < target.resolution() {
-                        target.get_parent(res).unwrap()
-                    } else {
-                        target
-                    }
-                })
-                .collect::<Vec<H3Cell>>();
-            for &cell in region {
-                if cell == promotions[cell.resolution() as usize] {
-                    return true;
-                }
-            }
-            false
-        }
+        let us915 = from_array(&hexagons);
 
-        let us915 = from_array(&hexagons, base_res);
+        assert_eq!(us915.len(), hexagons.len());
 
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
@@ -186,17 +203,14 @@ mod tests {
 
         assert!(us915.contains(tarpon_springs));
         assert!(naive_contains(&hexagons, tarpon_springs));
-      
+
         assert!(!us915.contains(gulf_of_mexico));
         assert!(!naive_contains(&hexagons, gulf_of_mexico));
-      
+
         assert!(!us915.contains(paris));
         assert!(!naive_contains(&hexagons, paris));
 
-        println!(
-            "new from us915: {}",
-            bench(|| from_array(&hexagons))
-        );
+        println!("new from us915: {}", bench(|| from_array(&hexagons)));
         println!(
             "naive_contains(&hexagons, tarpon_springs): {}",
             bench(|| naive_contains(&hexagons, tarpon_springs))
