@@ -218,6 +218,8 @@ mod tests {
         assert!(!us915.contains(paris));
         assert!(!naive_contains(&hexagons, paris));
 
+        assert!(hexagons.iter().all(|cell| us915.contains(*cell)));
+
         println!("new from us915: {}", bench(|| from_array(&hexagons)));
         println!(
             "naive_contains(&hexagons, tarpon_springs): {}",
@@ -240,5 +242,10 @@ mod tests {
             bench(|| naive_contains(&hexagons, paris))
         );
         println!("us915.contains(paris): {}", bench(|| us915.contains(paris)));
+
+        println!(
+            "hexagons.iter().all(|cell| us915.contains(*cell)): {}",
+            bench(|| hexagons.iter().all(|cell| us915.contains(*cell)))
+        );
     }
 }
