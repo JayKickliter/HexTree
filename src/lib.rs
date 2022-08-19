@@ -2,7 +2,6 @@ pub use h3ron;
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 
 /// An HTree is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
@@ -14,23 +13,16 @@ pub struct HTree {
 }
 
 // get all the Digits out of the cell
-fn parse_h3cell(hex: H3Cell, out: &mut Vec<usize>) {
-    out.clear();
-
+fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
     let index = hex.h3index();
     let resolution = hex.resolution();
 
-    if resolution == 0 {
-        return;
-    }
-
-    debug_assert!(out.is_empty());
-    out.extend((0..resolution).into_iter().rev().map(|r| {
+    for (r, o) in (0..resolution).into_iter().zip(out) {
         let offset = 0x2a - (3 * r);
         let digit = (index >> offset) & 0b111;
         assert!(digit < 7);
-        digit as usize
-    }))
+        *o = digit as u8;
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -58,14 +50,14 @@ impl Node {
         }
     }
 
-    pub fn insert(&mut self, digits: &mut Vec<usize>) {
-        match digits.pop() {
-            Some(digit) => match self.children[digit].as_mut() {
-                Some(node) => node.insert(digits),
+    pub fn insert(&mut self, digits: &[u8]) {
+        match digits.split_first() {
+            Some((&digit, rest)) => match self.children[digit as usize].as_mut() {
+                Some(node) => node.insert(rest),
                 None => {
                     let mut node = Node::new();
-                    node.insert(digits);
-                    self.children[digit] = Some(node);
+                    node.insert(rest);
+                    self.children[digit as usize] = Some(node);
                 }
             },
             None => (),
@@ -76,27 +68,22 @@ impl Node {
         self.children.iter().all(|c| c.is_none())
     }
 
-    pub fn contains(&self, digits: &mut Vec<usize>) -> bool {
+    pub fn contains(&self, digits: &[u8]) -> bool {
         if self.is_full() {
             return true;
         }
 
-        match digits.pop() {
-            Some(digit) => {
+        match digits.split_first() {
+            Some((&digit, rest)) => {
                 // TODO check if this node is "full"
-                match &self.children[digit] {
-                    Some(node) => node.contains(digits),
+                match &self.children[digit as usize] {
+                    Some(node) => node.contains(rest),
                     None => false,
                 }
             }
             None => true,
         }
     }
-}
-
-thread_local! {
-    /// Reusable storage for H3 cell digits
-    pub static DIGITS_BUF: RefCell<Vec<usize>> = RefCell::new(Vec::with_capacity(16));
 }
 
 impl HTree {
@@ -117,30 +104,30 @@ impl HTree {
 
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = hex.base_cell_number();
-        DIGITS_BUF.with(|b| {
-            let buf = &mut b.borrow_mut();
-            parse_h3cell(hex, buf);
-            match self.nodes[base_cell as usize].as_mut() {
-                Some(node) => node.insert(buf),
-                None => {
-                    let mut node = Node::new();
-                    node.insert(buf);
-                    self.nodes[base_cell as usize] = Some(node);
-                }
+        let mut digit_buf = [0; 16];
+        parse_h3cell(hex, &mut digit_buf[..hex.resolution() as usize]);
+        let digits = &digit_buf[..hex.resolution() as usize];
+        match self.nodes[base_cell as usize].as_mut() {
+            Some(node) => node.insert(digits),
+            None => {
+                let mut node = Node::new();
+                node.insert(digits);
+                self.nodes[base_cell as usize] = Some(node);
             }
-        });
+        }
     }
 
     pub fn contains(&self, hex: H3Cell) -> bool {
         let base_cell = hex.base_cell_number();
-        DIGITS_BUF.with(|b| {
-            let buf = &mut b.borrow_mut();
-            parse_h3cell(hex, buf);
-            match self.nodes[base_cell as usize].as_ref() {
-                Some(node) => node.contains(buf),
-                None => false,
+        match self.nodes[base_cell as usize].as_ref() {
+            Some(node) => {
+                let mut digit_buf = [0; 16];
+                parse_h3cell(hex, &mut digit_buf[..hex.resolution() as usize]);
+                let digits = &digit_buf[..hex.resolution() as usize];
+                node.contains(digits)
             }
-        })
+            None => false,
+        }
     }
 }
 
