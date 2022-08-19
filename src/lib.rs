@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 pub struct HTree {
     /// All h3 0 base cell indices in the tree
-    nodes: HashMap<u8, Node>,
+    nodes: Box<[Option<Node>]>,
 }
 
 // get all the Digits out of the cell
@@ -61,19 +61,16 @@ impl Node {
 
     pub fn insert(&mut self, mut digits: Vec<usize>) {
         match digits.pop() {
-            Some(digit) => {
-                // TODO check if this node is "full"
-                match self.children[digit].as_mut() {
-                    Some(node) => node.insert(digits),
-                    None => {
-                        let mut node = Node::new();
-                        node.insert(digits);
-                        self.children[digit] = Some(node);
-                    }
+            Some(digit) => match self.children[digit].as_mut() {
+                Some(node) => node.insert(digits),
+                None => {
+                    let mut node = Node::new();
+                    node.insert(digits);
+                    self.children[digit] = Some(node);
                 }
-            }
+            },
             None => (),
-        }
+        };
     }
 
     pub fn is_full(&self) -> bool {
@@ -102,12 +99,12 @@ impl HTree {
     /// Create a new HTree with given root resolution.
     pub fn new() -> Self {
         Self {
-            nodes: HashMap::new(),
+            nodes: vec![None; 128].into_boxed_slice(),
         }
     }
 
     pub fn len(&self) -> usize {
-        self.nodes.values().map(|node| node.len()).sum()
+        self.nodes.iter().flatten().map(|node| node.len()).sum()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -117,19 +114,19 @@ impl HTree {
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = hex.base_cell_number();
 
-        match self.nodes.get_mut(&base_cell) {
+        match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert(parse_h3cell(hex)),
             None => {
                 let mut node = Node::new();
                 node.insert(parse_h3cell(hex));
-                self.nodes.insert(base_cell, node);
+                self.nodes[base_cell as usize] = Some(node);
             }
         }
     }
 
     pub fn contains(&self, hex: H3Cell) -> bool {
         let base_cell = hex.base_cell_number();
-        match self.nodes.get(&base_cell) {
+        match self.nodes[base_cell as usize].as_ref() {
             Some(node) => node.contains(parse_h3cell(hex)),
             None => false,
         }
