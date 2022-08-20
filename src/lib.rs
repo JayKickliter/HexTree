@@ -1,7 +1,7 @@
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "use-serde")]
 use serde::{Deserialize, Serialize};
-use std::mem::size_of;
+use std::{mem::size_of, ops::Deref, ops::DerefMut};
 
 /// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
@@ -27,47 +27,47 @@ fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
 
 #[derive(Clone)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
-struct Node {
-    children: Box<[Option<Node>; 7]>,
+struct Node(Box<[Option<Node>; 7]>);
+
+impl Deref for Node {
+    type Target = [Option<Node>];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0[..]
+    }
+}
+
+impl DerefMut for Node {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0[..]
+    }
 }
 
 impl Node {
     pub fn mem_size(&self) -> usize {
-        size_of::<Self>()
-            + self
-                .children
-                .iter()
-                .flatten()
-                .map(|n| n.mem_size())
-                .sum::<usize>()
+        size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
     }
 
     pub fn new() -> Self {
-        Self {
-            children: Box::new([None, None, None, None, None, None, None]),
-        }
+        Self(Box::new([None, None, None, None, None, None, None]))
     }
 
     pub fn len(&self) -> usize {
         if self.is_full() {
             1
         } else {
-            self.children
-                .iter()
-                .flatten()
-                .map(|child| child.len())
-                .sum()
+            self.iter().flatten().map(|child| child.len()).sum()
         }
     }
 
     pub fn insert(&mut self, digits: &[u8]) {
         match digits.split_first() {
-            Some((&digit, rest)) => match self.children[digit as usize].as_mut() {
+            Some((&digit, rest)) => match self[digit as usize].as_mut() {
                 Some(node) => node.insert(rest),
                 None => {
                     let mut node = Node::new();
                     node.insert(rest);
-                    self.children[digit as usize] = Some(node);
+                    self[digit as usize] = Some(node);
                 }
             },
             None => (),
@@ -75,7 +75,7 @@ impl Node {
     }
 
     pub fn is_full(&self) -> bool {
-        self.children.iter().all(|c| c.is_none())
+        self.iter().all(|c| c.is_none())
     }
 
     pub fn contains(&self, digits: &[u8]) -> bool {
@@ -86,7 +86,7 @@ impl Node {
         match digits.split_first() {
             Some((&digit, rest)) => {
                 // TODO check if this node is "full"
-                match &self.children[digit as usize] {
+                match &self[digit as usize] {
                     Some(node) => node.contains(rest),
                     None => false,
                 }
