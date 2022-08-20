@@ -30,9 +30,7 @@ impl HexSet {
 
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = hex.base_cell_number();
-        let mut digit_buf = [0; 16];
-        parse_h3cell(hex, &mut digit_buf[..hex.resolution() as usize]);
-        let digits = &digit_buf[..hex.resolution() as usize];
+        let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert(digits),
             None => {
@@ -47,9 +45,7 @@ impl HexSet {
         let base_cell = hex.base_cell_number();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let mut digit_buf = [0; 16];
-                parse_h3cell(hex, &mut digit_buf[..hex.resolution() as usize]);
-                let digits = &digit_buf[..hex.resolution() as usize];
+                let digits = Digits::new(hex);
                 node.contains(digits)
             }
             None => false,
@@ -92,13 +88,13 @@ impl Node {
         }
     }
 
-    pub fn insert(&mut self, digits: &[u8]) {
-        match digits.split_first() {
-            Some((&digit, rest)) => match self[digit as usize].as_mut() {
-                Some(node) => node.insert(rest),
+    pub fn insert(&mut self, mut digits: Digits) {
+        match digits.next() {
+            Some(digit) => match self[digit as usize].as_mut() {
+                Some(node) => node.insert(digits),
                 None => {
                     let mut node = Node::new();
-                    node.insert(rest);
+                    node.insert(digits);
                     self[digit as usize] = Some(node);
                 }
             },
@@ -110,16 +106,16 @@ impl Node {
         self.iter().all(|c| c.is_none())
     }
 
-    pub fn contains(&self, digits: &[u8]) -> bool {
+    pub fn contains(&self, mut digits: Digits) -> bool {
         if self.is_full() {
             return true;
         }
 
-        match digits.split_first() {
-            Some((&digit, rest)) => {
+        match digits.next() {
+            Some(digit) => {
                 // TODO check if this node is "full"
                 match &self[digit as usize] {
-                    Some(node) => node.contains(rest),
+                    Some(node) => node.contains(digits),
                     None => false,
                 }
             }
@@ -142,16 +138,30 @@ impl DerefMut for Node {
     }
 }
 
-// get all the Digits out of the cell
-fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
-    let index = hex.h3index();
-    let resolution = hex.resolution();
+struct Digits(u64, u8);
 
-    for (r, o) in (0..resolution).into_iter().zip(out) {
-        let offset = 0x2a - (3 * r);
-        let digit = (index >> offset) & 0b111;
-        assert!(digit < 7);
-        *o = digit as u8;
+impl Digits {
+    fn new(cell: H3Cell) -> Self {
+        let res = cell.resolution();
+        let mask = u128::MAX.wrapping_shl(64 - (3 * res as u32)) as u64;
+        let inner: u64 = cell.h3index().wrapping_shl(19) & mask;
+        Self(inner, res)
+    }
+}
+
+impl Iterator for Digits {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        let (inner, remaining) = (self.0, self.1);
+        if remaining == 0 {
+            None
+        } else {
+            let out = (inner & (0b111 << 61)) >> 61;
+            self.0 = inner << 3;
+            debug_assert!(out < 7);
+            self.1 -= 1;
+            Some(out as u8)
+        }
     }
 }
 
@@ -307,6 +317,25 @@ mod tests {
                     assert!(!cells_b.iter().any(|cell| tree_a.contains(*cell)));
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_digits() {
+        let test_cases: &[(u64, &[u8])] = &[
+            (577164439745200127, &[]),                    // res 0
+            (585793956755800063, &[2, 0]),                // res 2
+            (592638622797135871, &[6, 3, 2]),             // res 3
+            (596251300178427903, &[3, 6, 6, 2]),          // res 4
+            (599803672997658623, &[3, 4, 4, 1, 4]),       // res 5
+            (604614882611953663, &[1, 4, 0, 4, 1, 0]),    // res 6
+            (608557861265473535, &[2, 0, 2, 3, 2, 1, 1]), // res 7
+        ];
+
+        for (index, ref_digits) in test_cases {
+            let cell = H3Cell::new(*index);
+            let digits = Digits::new(cell).collect::<Vec<u8>>();
+            assert_eq!(&&digits, ref_digits);
         }
     }
 }
