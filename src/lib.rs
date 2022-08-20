@@ -12,90 +12,6 @@ pub struct HexSet {
     nodes: Box<[Option<Node>]>,
 }
 
-// get all the Digits out of the cell
-fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
-    let index = hex.h3index();
-    let resolution = hex.resolution();
-
-    for (r, o) in (0..resolution).into_iter().zip(out) {
-        let offset = 0x2a - (3 * r);
-        let digit = (index >> offset) & 0b111;
-        assert!(digit < 7);
-        *o = digit as u8;
-    }
-}
-
-#[derive(Clone)]
-#[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
-struct Node(Box<[Option<Node>; 7]>);
-
-impl Deref for Node {
-    type Target = [Option<Node>];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0[..]
-    }
-}
-
-impl DerefMut for Node {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0[..]
-    }
-}
-
-impl Node {
-    pub fn mem_size(&self) -> usize {
-        size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
-    }
-
-    pub fn new() -> Self {
-        Self(Box::new([None, None, None, None, None, None, None]))
-    }
-
-    pub fn len(&self) -> usize {
-        if self.is_full() {
-            1
-        } else {
-            self.iter().flatten().map(|child| child.len()).sum()
-        }
-    }
-
-    pub fn insert(&mut self, digits: &[u8]) {
-        match digits.split_first() {
-            Some((&digit, rest)) => match self[digit as usize].as_mut() {
-                Some(node) => node.insert(rest),
-                None => {
-                    let mut node = Node::new();
-                    node.insert(rest);
-                    self[digit as usize] = Some(node);
-                }
-            },
-            None => (),
-        };
-    }
-
-    pub fn is_full(&self) -> bool {
-        self.iter().all(|c| c.is_none())
-    }
-
-    pub fn contains(&self, digits: &[u8]) -> bool {
-        if self.is_full() {
-            return true;
-        }
-
-        match digits.split_first() {
-            Some((&digit, rest)) => {
-                // TODO check if this node is "full"
-                match &self[digit as usize] {
-                    Some(node) => node.contains(rest),
-                    None => false,
-                }
-            }
-            None => true,
-        }
-    }
-}
-
 impl HexSet {
     /// Create a new `HTree` with given root resolution.
     pub fn new() -> Self {
@@ -152,6 +68,90 @@ impl HexSet {
                 .flatten()
                 .map(|n| n.mem_size())
                 .sum::<usize>()
+    }
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
+struct Node(Box<[Option<Node>; 7]>);
+
+impl Node {
+    pub fn mem_size(&self) -> usize {
+        size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
+    }
+
+    pub fn new() -> Self {
+        Self(Box::new([None, None, None, None, None, None, None]))
+    }
+
+    pub fn len(&self) -> usize {
+        if self.is_full() {
+            1
+        } else {
+            self.iter().flatten().map(|child| child.len()).sum()
+        }
+    }
+
+    pub fn insert(&mut self, digits: &[u8]) {
+        match digits.split_first() {
+            Some((&digit, rest)) => match self[digit as usize].as_mut() {
+                Some(node) => node.insert(rest),
+                None => {
+                    let mut node = Node::new();
+                    node.insert(rest);
+                    self[digit as usize] = Some(node);
+                }
+            },
+            None => (),
+        };
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.iter().all(|c| c.is_none())
+    }
+
+    pub fn contains(&self, digits: &[u8]) -> bool {
+        if self.is_full() {
+            return true;
+        }
+
+        match digits.split_first() {
+            Some((&digit, rest)) => {
+                // TODO check if this node is "full"
+                match &self[digit as usize] {
+                    Some(node) => node.contains(rest),
+                    None => false,
+                }
+            }
+            None => true,
+        }
+    }
+}
+
+impl Deref for Node {
+    type Target = [Option<Node>];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0[..]
+    }
+}
+
+impl DerefMut for Node {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0[..]
+    }
+}
+
+// get all the Digits out of the cell
+fn parse_h3cell(hex: H3Cell, out: &mut [u8]) {
+    let index = hex.h3index();
+    let resolution = hex.resolution();
+
+    for (r, o) in (0..resolution).into_iter().zip(out) {
+        let offset = 0x2a - (3 * r);
+        let digit = (index >> offset) & 0b111;
+        assert!(digit < 7);
+        *o = digit as u8;
     }
 }
 
