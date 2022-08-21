@@ -138,28 +138,33 @@ impl DerefMut for Node {
     }
 }
 
-struct Digits(u64, u8);
+struct Digits {
+    digits: u64,
+    remaining: u8,
+}
 
 impl Digits {
     fn new(cell: H3Cell) -> Self {
         let res = cell.resolution();
         let mask = u128::MAX.wrapping_shl(64 - (3 * res as u32)) as u64;
-        let inner: u64 = cell.h3index().wrapping_shl(19) & mask;
-        Self(inner, res)
+        let digits: u64 = cell.h3index().wrapping_shl(19) & mask;
+        Self {
+            digits,
+            remaining: res,
+        }
     }
 }
 
 impl Iterator for Digits {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
-        let (inner, remaining) = (self.0, self.1);
-        if remaining == 0 {
+        if self.remaining == 0 {
             None
         } else {
-            let out = (inner & (0b111 << 61)) >> 61;
-            self.0 = inner << 3;
+            let out = (self.digits & (0b111 << 61)) >> 61;
+            self.digits = self.digits << 3;
             debug_assert!(out < 7);
-            self.1 -= 1;
+            self.remaining -= 1;
             Some(out as u8)
         }
     }
