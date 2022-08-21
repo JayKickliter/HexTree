@@ -119,7 +119,9 @@ impl Node {
                     None => false,
                 }
             }
-            None => true,
+            // No digits left, but `self` isn't full, so this hex
+            // can't fully contain the target.
+            None => false,
         }
     }
 }
@@ -162,7 +164,7 @@ impl Iterator for Digits {
             None
         } else {
             let out = (self.digits & (0b111 << 61)) >> 61;
-            self.digits = self.digits << 3;
+            self.digits <<= 3;
             debug_assert!(out < 7);
             self.remaining -= 1;
             Some(out as u8)
@@ -248,7 +250,7 @@ mod tests {
         let tarpon_springs =
             H3Cell::from_coordinate(&coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
         let gulf_of_mexico =
-            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 12).unwrap();
+            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
         assert!(us915_tree.contains(tarpon_springs));
