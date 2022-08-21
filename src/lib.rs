@@ -5,7 +5,7 @@ use std::{mem::size_of, ops::Deref, ops::DerefMut};
 
 /// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
@@ -67,7 +67,7 @@ impl HexSet {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
 struct Node(Box<[Option<Node>; 7]>);
 
@@ -98,7 +98,23 @@ impl Node {
                     self[digit as usize] = Some(node);
                 }
             },
-            None => (),
+            None => *self.0 = [None, None, None, None, None, None, None],
+        };
+        self.coalesce();
+    }
+
+    fn coalesce(&mut self) {
+        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = &*self.0 {
+            if n0.is_full()
+                && n1.is_full()
+                && n2.is_full()
+                && n3.is_full()
+                && n4.is_full()
+                && n5.is_full()
+                && n6.is_full()
+            {
+                *self.0 = [None, None, None, None, None, None, None]
+            }
         };
     }
 
@@ -199,6 +215,7 @@ mod tests {
     static KR920_SERIALIZED: &[u8] = include_bytes!("../test/KR920.res7.h3idx");
     static RU864_SERIALIZED: &[u8] = include_bytes!("../test/RU864.res7.h3idx");
     static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
+    static US915_NOCOMPACT_SERIALIZED: &[u8] = include_bytes!("../test/US915.nocompact.res7.h3idx");
 
     /// Perform a linear search of `region` for `target` cell.
     fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
@@ -344,5 +361,34 @@ mod tests {
             let digits = Digits::new(cell).collect::<Vec<u8>>();
             assert_eq!(&&digits, ref_digits);
         }
+    }
+
+    #[test]
+    fn test_compaction() {
+        let (mut us915_tree, us915_cells) = from_serialized(US915_SERIALIZED);
+        let (mut us915_nocompact_tree, us915_nocompact_cells) =
+            from_serialized(US915_NOCOMPACT_SERIALIZED);
+        let gulf_of_mexico =
+            H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
+        assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
+        assert_eq!(us915_tree, us915_nocompact_tree);
+        assert!(us915_nocompact_tree.len() < us915_nocompact_cells.len());
+        assert!(us915_nocompact_cells
+            .iter()
+            .all(|&c| us915_nocompact_tree.contains(c)));
+        assert!(us915_cells
+            .iter()
+            .all(|&c| us915_nocompact_tree.contains(c)));
+        assert!(us915_nocompact_cells
+            .iter()
+            .all(|&c| us915_tree.contains(c)));
+
+        assert!(!us915_tree.contains(gulf_of_mexico));
+        assert!(!us915_nocompact_tree.contains(gulf_of_mexico));
+        us915_tree.insert(gulf_of_mexico);
+        us915_nocompact_tree.insert(gulf_of_mexico);
+        assert!(us915_tree.contains(gulf_of_mexico));
+        assert!(us915_nocompact_tree.contains(gulf_of_mexico));
+        assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
     }
 }
