@@ -29,7 +29,7 @@ impl HexSet {
     }
 
     pub fn insert(&mut self, hex: H3Cell) {
-        let base_cell = hex.base_cell_number();
+        let base_cell = base(&hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert(digits),
@@ -42,7 +42,7 @@ impl HexSet {
     }
 
     pub fn contains(&self, hex: H3Cell) -> bool {
-        let base_cell = hex.base_cell_number();
+        let base_cell = base(&hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
@@ -192,6 +192,13 @@ impl Default for HexSet {
     fn default() -> Self {
         HexSet::new()
     }
+}
+
+/// Returns a cell's base.
+fn base(cell: &H3Cell) -> u8 {
+    let index = cell.h3index();
+    let base = (index >> 0x2D) & 0b111_1111;
+    base as u8
 }
 
 #[cfg(test)]
