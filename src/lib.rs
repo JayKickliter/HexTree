@@ -41,11 +41,11 @@ impl HexSet {
         }
     }
 
-    pub fn contains(&self, hex: H3Cell) -> bool {
+    pub fn contains(&self, hex: &H3Cell) -> bool {
         let base_cell = base(&hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(hex);
+                let digits = Digits::new(*hex);
                 node.contains(digits)
             }
             None => false,
@@ -277,16 +277,16 @@ mod tests {
             H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
         let paris = H3Cell::from_coordinate(&coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
-        assert!(us915_tree.contains(tarpon_springs));
+        assert!(us915_tree.contains(&tarpon_springs));
         assert!(naive_contains(&us915_cells, tarpon_springs));
 
-        assert!(!us915_tree.contains(gulf_of_mexico));
+        assert!(!us915_tree.contains(&gulf_of_mexico));
         assert!(!naive_contains(&us915_cells, gulf_of_mexico));
 
-        assert!(!us915_tree.contains(paris));
+        assert!(!us915_tree.contains(&paris));
         assert!(!naive_contains(&us915_cells, paris));
 
-        assert!(us915_cells.iter().all(|cell| us915_tree.contains(*cell)));
+        assert!(us915_cells.iter().all(|cell| us915_tree.contains(&*cell)));
 
         println!("new from us915: {}", bench(|| from_array(&us915_cells)));
         println!(
@@ -294,29 +294,29 @@ mod tests {
             bench(|| naive_contains(&us915_cells, tarpon_springs))
         );
         println!(
-            "us915.contains(tarpon_springs): {}",
-            bench(|| us915_tree.contains(tarpon_springs))
+            "us915.contains(&tarpon_springs): {}",
+            bench(|| us915_tree.contains(&tarpon_springs))
         );
         println!(
             "naive_contains(&us915_cells, gulf_of_mexico): {}",
             bench(|| naive_contains(&us915_cells, gulf_of_mexico))
         );
         println!(
-            "us915.contains(gulf_of_mexico): {}",
-            bench(|| us915_tree.contains(tarpon_springs))
+            "us915.contains(&gulf_of_mexico): {}",
+            bench(|| us915_tree.contains(&tarpon_springs))
         );
         println!(
             "naive_contains(&us915_cells, paris): {}",
             bench(|| naive_contains(&us915_cells, paris))
         );
         println!(
-            "us915.contains(paris): {}",
-            bench(|| us915_tree.contains(paris))
+            "us915.contains(&paris): {}",
+            bench(|| us915_tree.contains(&paris))
         );
 
         println!(
-            "us915_cells.iter().all(|cell| us915.contains(*cell)): {}",
-            bench(|| us915_cells.iter().all(|cell| us915_tree.contains(*cell)))
+            "us915_cells.iter().all(|cell| us915.contains(&*cell)): {}",
+            bench(|| us915_cells.iter().all(|cell| us915_tree.contains(&*cell)))
         );
     }
 
@@ -343,9 +343,9 @@ mod tests {
             for (name_b, (_tree_b, cells_b)) in regions.iter() {
                 if name_a == name_b {
                     assert_eq!(tree_a.len(), cells_a.len());
-                    assert!(cells_a.iter().all(|cell| tree_a.contains(*cell)));
+                    assert!(cells_a.iter().all(|cell| tree_a.contains(&*cell)));
                 } else {
-                    assert!(!cells_b.iter().any(|cell| tree_a.contains(*cell)));
+                    assert!(!cells_b.iter().any(|cell| tree_a.contains(&*cell)));
                 }
             }
         }
@@ -382,20 +382,20 @@ mod tests {
         assert!(us915_nocompact_tree.len() < us915_nocompact_cells.len());
         assert!(us915_nocompact_cells
             .iter()
-            .all(|&c| us915_nocompact_tree.contains(c)));
+            .all(|&c| us915_nocompact_tree.contains(&c)));
         assert!(us915_cells
             .iter()
-            .all(|&c| us915_nocompact_tree.contains(c)));
+            .all(|&c| us915_nocompact_tree.contains(&c)));
         assert!(us915_nocompact_cells
             .iter()
-            .all(|&c| us915_tree.contains(c)));
+            .all(|&c| us915_tree.contains(&c)));
 
-        assert!(!us915_tree.contains(gulf_of_mexico));
-        assert!(!us915_nocompact_tree.contains(gulf_of_mexico));
+        assert!(!us915_tree.contains(&gulf_of_mexico));
+        assert!(!us915_nocompact_tree.contains(&gulf_of_mexico));
         us915_tree.insert(gulf_of_mexico);
         us915_nocompact_tree.insert(gulf_of_mexico);
-        assert!(us915_tree.contains(gulf_of_mexico));
-        assert!(us915_nocompact_tree.contains(gulf_of_mexico));
+        assert!(us915_tree.contains(&gulf_of_mexico));
+        assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
         assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
     }
 }
