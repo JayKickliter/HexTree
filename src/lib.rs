@@ -42,7 +42,7 @@ impl HexSet {
     }
 
     pub fn contains(&self, hex: &H3Cell) -> bool {
-        let base_cell = base(&hex);
+        let base_cell = base(hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(*hex);
