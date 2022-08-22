@@ -13,10 +13,10 @@ pub struct HexSet {
 }
 
 impl HexSet {
-    /// Create a new `HTree` with given root resolution.
+    /// Create an empty `HexSet`.
     pub fn new() -> Self {
         Self {
-            nodes: vec![None; 128].into_boxed_slice(),
+            nodes: vec![None; 122].into_boxed_slice(),
         }
     }
 
@@ -207,7 +207,7 @@ mod tests {
     use byteorder::{ReadBytesExt, LE};
     use easybench::bench;
     use geo_types::coord;
-    use std::io::Cursor;
+    use std::{convert::TryFrom, io::Cursor};
 
     static AS923_1_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1.res7.h3idx");
     static AS923_1B_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1B.res7.h3idx");
