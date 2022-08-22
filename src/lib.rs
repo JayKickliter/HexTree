@@ -1,12 +1,12 @@
 use h3ron::{H3Cell, Index};
-#[cfg(feature = "use-serde")]
+#[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 use std::{mem::size_of, ops::Deref, ops::DerefMut};
 
 /// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node>]>,
@@ -68,7 +68,7 @@ impl HexSet {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "use-serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 struct Node(Box<[Option<Node>; 7]>);
 
 impl Node {
