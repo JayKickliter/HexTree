@@ -1,17 +1,28 @@
 [package]
-name = "htree"
+name = "hexset"
 version = "0.1.0"
-edition = "2021"
-
-[dev-dependencies]
-byteorder = "*"
-easybench = "1"
-geo-types = "*"
-
-[dependencies]
-h3ron = { version = "0.14.0" }
-serde = { version = "1", optional = true, features = ["derive"] }
+authors = ["Jay Kickliter <jay@kickliter.com>"]
+categories = ["science", "data-structures"]
+edition = "2018"
+exclude = ["/test/*"]
+readme = "README.md"
+keywords = ["geo", "geography", "geospatial", "gis", "h3"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jaykickliter/hexset"
+description = """
+A HexSet is datastructure for performing hit-testing of a geographic
+region. Regions are internally represented as a tree of H3 polygons.
+"""
 
 [features]
 default = []
 with-serde = ["h3ron/use-serde", "serde"]
+
+[dependencies]
+h3ron = { version = "0.14" }
+serde = { version = "1", optional = true, features = ["derive"] }
+
+[dev-dependencies]
+byteorder = "1"
+easybench = "1"
+geo-types = "*"
