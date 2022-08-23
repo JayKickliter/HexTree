@@ -1,7 +1,7 @@
 use h3ron::{H3Cell, Index};
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
-use std::{mem::size_of, ops::Deref, ops::DerefMut};
+use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
 
 /// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
 /// hexagons, allowing for efficient region lookup.
@@ -67,7 +67,7 @@ impl HexSet {
     }
 }
 
-impl std::iter::FromIterator<H3Cell> for HexSet {
+impl FromIterator<H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = H3Cell>,
@@ -80,7 +80,7 @@ impl std::iter::FromIterator<H3Cell> for HexSet {
     }
 }
 
-impl<'a> std::iter::FromIterator<&'a H3Cell> for HexSet {
+impl<'a> FromIterator<&'a H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = &'a H3Cell>,
