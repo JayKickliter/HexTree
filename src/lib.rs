@@ -67,6 +67,32 @@ impl HexSet {
     }
 }
 
+impl std::iter::FromIterator<H3Cell> for HexSet {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = H3Cell>,
+    {
+        let mut set = HexSet::new();
+        for cell in iter {
+            set.insert(cell);
+        }
+        set
+    }
+}
+
+impl<'a> std::iter::FromIterator<&'a H3Cell> for HexSet {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = &'a H3Cell>,
+    {
+        let mut set = HexSet::new();
+        for cell in iter {
+            set.insert(*cell);
+        }
+        set
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 struct Node(Box<[Option<Node>; 7]>);
@@ -244,14 +270,6 @@ mod tests {
         false
     }
 
-    fn from_array(cells: &[H3Cell]) -> HexSet {
-        let mut tree = HexSet::new();
-        for cell in cells.iter() {
-            tree.insert(*cell);
-        }
-        tree
-    }
-
     fn from_serialized(serialized: &[u8]) -> (HexSet, Vec<H3Cell>) {
         let mut hexagons: Vec<H3Cell> =
             Vec::with_capacity(serialized.len() / std::mem::size_of::<H3Cell>());
@@ -261,7 +279,7 @@ mod tests {
             hexagons.push(cell);
         }
         assert!(!hexagons.is_empty());
-        let tree = from_array(&hexagons);
+        let tree = hexagons.iter().collect();
         (tree, hexagons)
     }
 
@@ -288,7 +306,10 @@ mod tests {
 
         assert!(us915_cells.iter().all(|cell| us915_tree.contains(&*cell)));
 
-        println!("new from us915: {}", bench(|| from_array(&us915_cells)));
+        println!(
+            "new from us915: {}",
+            bench(|| us915_cells.iter().collect::<HexSet>())
+        );
         println!(
             "naive_contains(&us915_cells, tarpon_springs): {}",
             bench(|| naive_contains(&us915_cells, tarpon_springs))
