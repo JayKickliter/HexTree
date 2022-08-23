@@ -98,15 +98,15 @@ impl<'a> std::iter::FromIterator<&'a H3Cell> for HexSet {
 struct Node(Box<[Option<Node>; 7]>);
 
 impl Node {
-    pub fn mem_size(&self) -> usize {
+    fn mem_size(&self) -> usize {
         size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
     }
 
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self(Box::new([None, None, None, None, None, None, None]))
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         if self.is_full() {
             1
         } else {
@@ -114,7 +114,7 @@ impl Node {
         }
     }
 
-    pub fn insert(&mut self, mut digits: Digits) {
+    fn insert(&mut self, mut digits: Digits) {
         match digits.next() {
             Some(digit) => match self[digit as usize].as_mut() {
                 Some(node) => node.insert(digits),
@@ -144,11 +144,11 @@ impl Node {
         };
     }
 
-    pub fn is_full(&self) -> bool {
+    fn is_full(&self) -> bool {
         self.iter().all(|c| c.is_none())
     }
 
-    pub fn contains(&self, mut digits: Digits) -> bool {
+    fn contains(&self, mut digits: Digits) -> bool {
         if self.is_full() {
             return true;
         }
