@@ -399,4 +399,16 @@ mod tests {
         assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
         assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
     }
+
+    #[test]
+    fn test_mem_size() {
+        // Sanity check that `Option<Node>` behaves the same as
+        // `Option<Box<[Option<Node>; 7]>>` in that it uses `NULL` to
+        // represent the `None` variant.
+        assert_eq!(size_of::<Option<Node>>(), size_of::<*const ()>());
+        assert_eq!(
+            size_of::<Option<Node>>(),
+            size_of::<Option<Box<[Option<Node>; 7]>>>()
+        );
+    }
 }
