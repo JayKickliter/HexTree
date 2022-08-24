@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 //! A HexSet is a structure for representing geographical regions and
 //! efficiently testing performing hit-tests on that region. Or, in
