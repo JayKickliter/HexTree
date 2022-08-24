@@ -1,33 +1,56 @@
-//! An `HTree` is a b(ish)-tree-like structure of hierarchical H3
-//! hexagons, allowing for efficient region lookup.
+#![deny(missing_docs)]
+
+//! A HexSet is a structure for representing geographical regions and
+//! efficiently testing performing hit-tests on that region. Or, in
+//! other words: I have a region defined; does it contain this
+//! point on earth?
+//!
+//! # Features
+//!
+//! * **`serde-support`**: support for \[de\]serializing a HexSet via [serde].
+//!
+//! [serde]: https://docs.rs/serde/latest/serde/
 
 pub use h3ron;
 use h3ron::{H3Cell, Index};
 use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
 
+/// An efficient way to represent any portion(s) of Earth as a set of
+/// `H3` hexagons.
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(serde::Serialize, serde::Deserialize))]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node>]>,
 }
 
 impl HexSet {
-    /// Create an empty `HexSet`.
+    /// Constructs a new, empty `HexSet`.
+    ///
+    /// Incurs a single heap allocation to store all 122 resolution-0
+    /// H3 cells.
     pub fn new() -> Self {
         Self {
             nodes: vec![None; 122].into_boxed_slice(),
         }
     }
 
+    /// Returns the number of H3 cells in the set.
+    ///
+    /// This method only considers complete, or leaf, hexagons in the
+    /// set. Due to automatic compaction, this number may be
+    /// significantly smaller than the number of source cells used to
+    /// create the set.
     pub fn len(&self) -> usize {
         self.nodes.iter().flatten().map(|node| node.len()).sum()
     }
 
+    /// Returns `true` if the set contains no cells.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Adds a hexagon to the set.
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = base(&hex);
         let digits = Digits::new(hex);
@@ -41,6 +64,17 @@ impl HexSet {
         }
     }
 
+    /// Returns `true` if the set fully contains `hex`.
+    ///
+    /// This method will return `true` if any of the following are
+    /// true:
+    ///
+    /// 1. There was an earlier [insert][Self::insert] call with
+    ///    precisely this target hex.
+    /// 2. Several previously inserted hexagons coalesced into
+    ///    precisely this target hex.
+    /// 3. The set contains a complete (leaf) parent of this target
+    ///    hex due to 1 or 2.
     pub fn contains(&self, hex: &H3Cell) -> bool {
         let base_cell = base(hex);
         match self.nodes[base_cell as usize].as_ref() {
@@ -52,10 +86,10 @@ impl HexSet {
         }
     }
 
-    /// Returns the current memory use of this `HexSet`.
+    /// Returns the current memory use of this set.
     ///
-    /// Note: due to memory alignment, the actual total may be higher
-    ///       than reported.
+    /// Note: The actual total may be higher than reported due to
+    ///       memory alignment.
     pub fn mem_size(&self) -> usize {
         size_of::<Self>()
             + self
@@ -94,7 +128,7 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-support", derive(serde::Serialize, serde::Deserialize))]
 struct Node(Box<[Option<Node>; 7]>);
 
 impl Node {

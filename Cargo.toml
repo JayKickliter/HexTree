@@ -10,13 +10,16 @@ keywords = ["geo", "geography", "geospatial", "gis", "h3"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jaykickliter/hexset"
 description = """
-A HexSet is datastructure for performing hit-testing of a geographic
-region. Regions are internally represented as a tree of H3 polygons.
+A HexSet is datastructure for hit-testing geographic regions.
+Regions are internally represented as a tree of H3 polygons.
 """
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = []
-with-serde = ["h3ron/use-serde", "serde"]
+serde-support = ["h3ron/use-serde", "serde"]
 
 [dependencies]
 h3ron = { version = "0.14" }
