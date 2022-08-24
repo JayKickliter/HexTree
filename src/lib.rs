@@ -1,12 +1,12 @@
+//! An `HTree` is a b(ish)-tree-like structure of hierarchical H3
+//! hexagons, allowing for efficient region lookup.
+
+pub use h3ron;
 use h3ron::{H3Cell, Index};
-#[cfg(feature = "with-serde")]
-use serde::{Deserialize, Serialize};
 use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
 
-/// An `HTree` is a b(ish)-tree-like structure of hierarchical H3
-/// hexagons, allowing for efficient region lookup.
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node>]>,
@@ -94,7 +94,7 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 struct Node(Box<[Option<Node>; 7]>);
 
 impl Node {
