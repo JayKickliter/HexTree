@@ -23,6 +23,6 @@ h3ron = { version = "0.14" }
 serde = { version = "1", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-byteorder = "1"
 easybench = "1"
 geo-types = "*"
+h3-lorawan-regions = { git = "https://github.com/JayKickliter/h3-lorawan-regions.git", branch = "main" }

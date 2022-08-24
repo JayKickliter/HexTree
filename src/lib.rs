@@ -230,25 +230,10 @@ fn base(cell: &H3Cell) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byteorder::{ReadBytesExt, LE};
     use easybench::bench;
     use geo_types::coord;
-    use std::{convert::TryFrom, io::Cursor};
-
-    static AS923_1_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1.res7.h3idx");
-    static AS923_1B_SERIALIZED: &[u8] = include_bytes!("../test/AS923-1B.res7.h3idx");
-    static AS923_2_SERIALIZED: &[u8] = include_bytes!("../test/AS923-2.res7.h3idx");
-    static AS923_3_SERIALIZED: &[u8] = include_bytes!("../test/AS923-3.res7.h3idx");
-    static AS923_4_SERIALIZED: &[u8] = include_bytes!("../test/AS923-4.res7.h3idx");
-    static AU915_SERIALIZED: &[u8] = include_bytes!("../test/AU915.res7.h3idx");
-    static CN470_SERIALIZED: &[u8] = include_bytes!("../test/CN470.res7.h3idx");
-    static EU433_SERIALIZED: &[u8] = include_bytes!("../test/EU433.res7.h3idx");
-    static EU868_SERIALIZED: &[u8] = include_bytes!("../test/EU868.res7.h3idx");
-    static IN865_SERIALIZED: &[u8] = include_bytes!("../test/IN865.res7.h3idx");
-    static KR920_SERIALIZED: &[u8] = include_bytes!("../test/KR920.res7.h3idx");
-    static RU864_SERIALIZED: &[u8] = include_bytes!("../test/RU864.res7.h3idx");
-    static US915_SERIALIZED: &[u8] = include_bytes!("../test/US915.res7.h3idx");
-    static US915_NOCOMPACT_SERIALIZED: &[u8] = include_bytes!("../test/US915.nocompact.res7.h3idx");
+    use h3_lorawan_regions as regions;
+    use std::convert::TryFrom;
 
     /// Perform a linear search of `region` for `target` cell.
     fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
@@ -270,23 +255,18 @@ mod tests {
         false
     }
 
-    fn from_serialized(serialized: &[u8]) -> (HexSet, Vec<H3Cell>) {
-        let mut hexagons: Vec<H3Cell> =
-            Vec::with_capacity(serialized.len() / std::mem::size_of::<H3Cell>());
-        let mut csr = Cursor::new(serialized);
-        while let Ok(raw_index) = csr.read_u64::<LE>() {
-            let cell = H3Cell::try_from(raw_index).unwrap();
-            hexagons.push(cell);
-        }
-        assert!(!hexagons.is_empty());
-        let tree = hexagons.iter().collect();
-        (tree, hexagons)
+    fn from_indicies(indicies: &[u64]) -> (HexSet, Vec<H3Cell>) {
+        let cells: Vec<H3Cell> = indicies
+            .iter()
+            .map(|&idx| H3Cell::try_from(idx).unwrap())
+            .collect();
+        let set: HexSet = cells.iter().collect();
+        (set, cells)
     }
 
     #[test]
     fn all_up() {
-        let (us915_tree, us915_cells) = from_serialized(US915_SERIALIZED);
-
+        let (us915_tree, us915_cells) = from_indicies(regions::compact::US915);
         assert_eq!(us915_tree.len(), us915_cells.len());
 
         let tarpon_springs =
@@ -344,19 +324,19 @@ mod tests {
     #[test]
     fn all_regions() {
         let regions = &[
-            ("AS923_1", from_serialized(AS923_1_SERIALIZED)),
-            ("AS923_1B", from_serialized(AS923_1B_SERIALIZED)),
-            ("AS923_2", from_serialized(AS923_2_SERIALIZED)),
-            ("AS923_3", from_serialized(AS923_3_SERIALIZED)),
-            ("AS923_4", from_serialized(AS923_4_SERIALIZED)),
-            ("AU915", from_serialized(AU915_SERIALIZED)),
-            ("CN470", from_serialized(CN470_SERIALIZED)),
-            ("EU433", from_serialized(EU433_SERIALIZED)),
-            ("EU868", from_serialized(EU868_SERIALIZED)),
-            ("IN865", from_serialized(IN865_SERIALIZED)),
-            ("KR920", from_serialized(KR920_SERIALIZED)),
-            ("RU864", from_serialized(RU864_SERIALIZED)),
-            ("US915", from_serialized(US915_SERIALIZED)),
+            ("AS923_1", from_indicies(regions::compact::AS923_1)),
+            ("AS923_1B", from_indicies(regions::compact::AS923_1B)),
+            ("AS923_2", from_indicies(regions::compact::AS923_2)),
+            ("AS923_3", from_indicies(regions::compact::AS923_3)),
+            ("AS923_4", from_indicies(regions::compact::AS923_4)),
+            ("AU915", from_indicies(regions::compact::AU915)),
+            ("CN470", from_indicies(regions::compact::CN470)),
+            ("EU433", from_indicies(regions::compact::EU433)),
+            ("EU868", from_indicies(regions::compact::EU868)),
+            ("IN865", from_indicies(regions::compact::IN865)),
+            ("KR920", from_indicies(regions::compact::KR920)),
+            ("RU864", from_indicies(regions::compact::RU864)),
+            ("US915", from_indicies(regions::compact::US915)),
         ];
 
         // Do membership tests across the cartesian product off all regions
@@ -393,9 +373,9 @@ mod tests {
 
     #[test]
     fn test_compaction() {
-        let (mut us915_tree, us915_cells) = from_serialized(US915_SERIALIZED);
+        let (mut us915_tree, us915_cells) = from_indicies(regions::compact::US915);
         let (mut us915_nocompact_tree, us915_nocompact_cells) =
-            from_serialized(US915_NOCOMPACT_SERIALIZED);
+            from_indicies(regions::nocompact::US915);
         let gulf_of_mexico =
             H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
         assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
