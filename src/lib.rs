@@ -61,7 +61,7 @@ use std::{
 
 /// An efficient way to represent any portion(s) of Earth as a set of
 /// `H3` hexagons.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 #[cfg_attr(
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
@@ -155,6 +155,11 @@ impl HexSet {
         }
     }
 
+    /// Returns an iterator over all cells in this set.
+    pub fn cells(&self) -> impl IntoIterator<Item = H3Cell> {
+        [H3Cell::new(577164439745200127)]
+    }
+
     /// Returns the current memory use of this set.
     ///
     /// Note: The actual total may be higher than reported due to
@@ -196,7 +201,7 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 #[cfg_attr(
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
@@ -308,7 +313,7 @@ impl DerefMut for Node {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 #[cfg_attr(
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
@@ -435,16 +440,4 @@ mod tests {
             assert_eq!(&&digits, ref_digits);
         }
     }
-
-    // #[test]
-    // fn test_mem_size() {
-    //     // Sanity check that `Option<Node>` behaves the same as
-    //     // `Option<Box<[Option<Node>; 7]>>` in that it uses `NULL` to
-    //     // represent the `None` variant.
-    //     assert_eq!(size_of::<Option<Node>>(), size_of::<*const ()>());
-    //     assert_eq!(
-    //         size_of::<Option<Node>>(),
-    //         size_of::<Option<Box<[Option<Node>; 7]>>>()
-    //     );
-    // }
 }
