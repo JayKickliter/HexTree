@@ -64,7 +64,7 @@ use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
 )]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
-    nodes: Box<[Option<Node>]>,
+    root: Box<[Option<Node>]>,
 }
 
 impl HexSet {
@@ -74,7 +74,7 @@ impl HexSet {
     /// H3 cells.
     pub fn new() -> Self {
         Self {
-            nodes: vec![None; 122].into_boxed_slice(),
+            root: vec![None; 122].into_boxed_slice(),
         }
     }
 
@@ -85,7 +85,7 @@ impl HexSet {
     /// significantly smaller than the number of source cells used to
     /// create the set.
     pub fn len(&self) -> usize {
-        self.nodes.iter().flatten().map(|node| node.len()).sum()
+        self.root.iter().flatten().map(|node| node.len()).sum()
     }
 
     /// Returns `true` if the set contains no cells.
@@ -97,12 +97,12 @@ impl HexSet {
     pub fn insert(&mut self, hex: H3Cell) {
         let base_cell = base(&hex);
         let digits = Digits::new(hex);
-        match self.nodes[base_cell as usize].as_mut() {
+        match self.root[base_cell as usize].as_mut() {
             Some(node) => node.insert(digits),
             None => {
                 let mut node = Node::new();
                 node.insert(digits);
-                self.nodes[base_cell as usize] = Some(node);
+                self.root[base_cell as usize] = Some(node);
             }
         }
     }
@@ -120,7 +120,7 @@ impl HexSet {
     ///    hex due to 1 or 2.
     pub fn contains(&self, hex: &H3Cell) -> bool {
         let base_cell = base(hex);
-        match self.nodes[base_cell as usize].as_ref() {
+        match self.root[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(*hex);
                 node.contains(digits)
@@ -136,7 +136,7 @@ impl HexSet {
     pub fn mem_size(&self) -> usize {
         size_of::<Self>()
             + self
-                .nodes
+                .root
                 .iter()
                 .flatten()
                 .map(|n| n.mem_size())
