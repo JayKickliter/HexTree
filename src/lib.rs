@@ -84,6 +84,17 @@ impl HexSet {
         }
     }
 
+    /// Constructs a new, empty `HexSet`.
+    ///
+    /// Incurs a single heap allocation to store all 122 resolution-0
+    /// H3 cells.
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            root: vec![None; 122].into_boxed_slice(),
+            arena: NodeArena::with_capacity(cap),
+        }
+    }
+
     /// Returns the number of H3 cells in the set.
     ///
     /// This method only considers complete, or leaf, hexagons in the
@@ -311,6 +322,13 @@ impl NodeArena {
     fn new() -> Self {
         Self {
             nodes: Vec::new(),
+            free: Vec::new(),
+        }
+    }
+
+    fn with_capacity(cap: usize) -> Self {
+        Self {
+            nodes: Vec::with_capacity(cap),
             free: Vec::new(),
         }
     }
