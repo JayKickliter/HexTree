@@ -144,6 +144,43 @@ impl HexSet {
     }
 }
 
+struct HexSetIter<'a> {
+    root: &'a [Option<Node>],
+    curr: Option<(&'a Node, usize)>,
+    stack: Vec<(&'a Node, usize)>,
+}
+
+impl<'a> HexSetIter<'a> {
+    fn new(root: &'a [Option<Node>]) -> Self {
+        Self {
+            root,
+            curr: None,
+            stack: Vec::with_capacity(16),
+        }
+    }
+}
+
+impl<'a> Iterator for HexSetIter<'a> {
+    type Item = H3Cell;
+
+    fn next(&mut self) -> Option<H3Cell> {
+        while let Some(curr) = self.curr {
+            self.stack.push(curr);
+            self.curr = match curr.0[0].as_ref() {
+                Some(node) => Some((node, 0)),
+                None => None,
+            }
+        }
+        if let Some((node, idx)) = self.stack.pop() {
+            self.curr
+        } else {
+            None
+        }
+
+        None
+    }
+}
+
 impl FromIterator<H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
