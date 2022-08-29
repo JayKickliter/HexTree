@@ -129,7 +129,10 @@ fn test_compaction() {
         from_indicies(regions::nocompact::US915);
     let gulf_of_mexico = H3Cell::from_coordinate(&coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
-    assert!(us915_tree == us915_nocompact_tree);
+    assert!(us915_tree
+        .cells()
+        .into_iter()
+        .eq(us915_nocompact_tree.cells().into_iter()));
     assert!(us915_nocompact_tree.len() < us915_nocompact_cells.len());
     assert!(us915_nocompact_cells
         .iter()
