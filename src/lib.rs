@@ -53,7 +53,11 @@
 
 pub use h3ron;
 use h3ron::{H3Cell, Index};
-use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
+use std::{
+    iter::FromIterator,
+    mem::size_of,
+    ops::{Deref, DerefMut},
+};
 
 /// An efficient way to represent any portion(s) of Earth as a set of
 /// `H3` hexagons.
@@ -64,7 +68,8 @@ use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
 )]
 pub struct HexSet {
     /// All h3 0 base cell indices in the tree
-    root: Box<[Option<Node>]>,
+    root: Box<[Option<usize>]>,
+    arena: NodeArena,
 }
 
 impl HexSet {
@@ -75,6 +80,7 @@ impl HexSet {
     pub fn new() -> Self {
         Self {
             root: vec![None; 122].into_boxed_slice(),
+            arena: NodeArena::new(),
         }
     }
 
@@ -85,7 +91,11 @@ impl HexSet {
     /// significantly smaller than the number of source cells used to
     /// create the set.
     pub fn len(&self) -> usize {
-        self.root.iter().flatten().map(|node| node.len()).sum()
+        self.root
+            .iter()
+            .flatten()
+            .map(|arena_idx| self.arena[*arena_idx].len(&self.arena))
+            .sum()
     }
 
     /// Returns `true` if the set contains no cells.
@@ -98,11 +108,16 @@ impl HexSet {
         let base_cell = base(&hex);
         let digits = Digits::new(hex);
         match self.root[base_cell as usize].as_mut() {
-            Some(node) => node.insert(digits),
+            Some(arena_idx) => {
+                let mut node = self.arena[*arena_idx].clone();
+                node.insert(&mut self.arena, digits);
+                self.arena[*arena_idx] = node;
+            }
             None => {
                 let mut node = Node::new();
-                node.insert(digits);
-                self.root[base_cell as usize] = Some(node);
+                node.insert(&mut self.arena, digits);
+                let arena_idx = self.arena.alloc(node);
+                self.root[base_cell as usize] = Some(arena_idx);
             }
         }
     }
@@ -120,10 +135,10 @@ impl HexSet {
     ///    hex due to 1 or 2.
     pub fn contains(&self, hex: &H3Cell) -> bool {
         let base_cell = base(hex);
-        match self.root[base_cell as usize].as_ref() {
-            Some(node) => {
+        match self.root[base_cell as usize] {
+            Some(arena_idx) => {
                 let digits = Digits::new(*hex);
-                node.contains(digits)
+                self.arena[arena_idx].contains(&self.arena, digits)
             }
             None => false,
         }
@@ -139,7 +154,7 @@ impl HexSet {
                 .root
                 .iter()
                 .flatten()
-                .map(|n| n.mem_size())
+                .map(|arena_idx| self.arena[*arena_idx].mem_size(&self.arena))
                 .sum::<usize>()
     }
 }
@@ -175,51 +190,71 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-struct Node(Box<[Option<Node>; 7]>);
+struct Node([Option<usize>; 7]);
 
 impl Node {
-    fn mem_size(&self) -> usize {
-        size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
+    fn mem_size(&self, arena: &NodeArena) -> usize {
+        size_of::<Self>()
+            + self
+                .iter()
+                .flatten()
+                .map(|arena_idx| arena[*arena_idx].mem_size(arena))
+                .sum::<usize>()
     }
 
     fn new() -> Self {
-        Self(Box::new([None, None, None, None, None, None, None]))
+        Self([None, None, None, None, None, None, None])
     }
 
-    fn len(&self) -> usize {
+    fn len(&self, arena: &NodeArena) -> usize {
         if self.is_full() {
             1
         } else {
-            self.iter().flatten().map(|child| child.len()).sum()
+            self.iter()
+                .flatten()
+                .map(|arena_idx| arena[*arena_idx].len(arena))
+                .sum()
         }
     }
 
-    fn insert(&mut self, mut digits: Digits) {
+    fn insert(&mut self, arena: &mut NodeArena, mut digits: Digits) {
         match digits.next() {
             Some(digit) => match self[digit as usize].as_mut() {
-                Some(node) => node.insert(digits),
+                Some(arena_idx) => {
+                    let mut node = arena[*arena_idx].clone();
+                    node.insert(arena, digits);
+                    arena[*arena_idx] = node;
+                }
                 None => {
                     let mut node = Node::new();
-                    node.insert(digits);
-                    self[digit as usize] = Some(node);
+                    node.insert(arena, digits);
+                    let arena_idx = arena.alloc(node);
+                    self[digit as usize] = Some(arena_idx);
                 }
             },
-            None => *self.0 = [None, None, None, None, None, None, None],
+            None => self.0 = [None, None, None, None, None, None, None],
         };
-        self.coalesce();
+        self.coalesce(arena);
     }
 
-    fn coalesce(&mut self) {
-        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = &*self.0 {
-            if n0.is_full()
-                && n1.is_full()
-                && n2.is_full()
-                && n3.is_full()
-                && n4.is_full()
-                && n5.is_full()
-                && n6.is_full()
+    fn coalesce(&mut self, arena: &mut NodeArena) {
+        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = self.0 {
+            if arena[n0].is_full()
+                && arena[n1].is_full()
+                && arena[n2].is_full()
+                && arena[n3].is_full()
+                && arena[n4].is_full()
+                && arena[n5].is_full()
+                && arena[n6].is_full()
             {
-                *self.0 = [None, None, None, None, None, None, None]
+                arena.free(n0);
+                arena.free(n1);
+                arena.free(n2);
+                arena.free(n3);
+                arena.free(n4);
+                arena.free(n5);
+                arena.free(n6);
+                self.0 = [None, None, None, None, None, None, None]
             }
         };
     }
@@ -228,7 +263,7 @@ impl Node {
         self.iter().all(|c| c.is_none())
     }
 
-    fn contains(&self, mut digits: Digits) -> bool {
+    fn contains(&self, arena: &NodeArena, mut digits: Digits) -> bool {
         if self.is_full() {
             return true;
         }
@@ -237,7 +272,7 @@ impl Node {
             Some(digit) => {
                 // TODO check if this node is "full"
                 match &self[digit as usize] {
-                    Some(node) => node.contains(digits),
+                    Some(arena_idx) => arena[*arena_idx].contains(arena, digits),
                     None => false,
                 }
             }
@@ -249,7 +284,7 @@ impl Node {
 }
 
 impl Deref for Node {
-    type Target = [Option<Node>];
+    type Target = [Option<usize>];
 
     fn deref(&self) -> &Self::Target {
         &self.0[..]
@@ -259,6 +294,60 @@ impl Deref for Node {
 impl DerefMut for Node {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0[..]
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize)
+)]
+struct NodeArena {
+    nodes: Vec<Node>,
+    free: Vec<usize>,
+}
+
+impl NodeArena {
+    fn new() -> Self {
+        Self {
+            nodes: Vec::new(),
+            free: Vec::new(),
+        }
+    }
+
+    fn alloc(&mut self, node: Node) -> usize {
+        match self.free.pop() {
+            Some(idx) => {
+                self.nodes[idx] = node;
+                idx
+            }
+            None => {
+                self.nodes.push(node);
+                self.nodes.len() - 1
+            }
+        }
+    }
+
+    fn free(&mut self, node_idx: usize) {
+        for node in self.nodes[node_idx].0 {
+            if let Some(idx) = node {
+                self.free(idx)
+            }
+        }
+        self.free.push(node_idx);
+    }
+}
+
+impl std::ops::Index<usize> for NodeArena {
+    type Output = Node;
+    fn index(&self, index: usize) -> &Node {
+        &self.nodes[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for NodeArena {
+    fn index_mut(&mut self, index: usize) -> &mut Node {
+        &mut self.nodes[index]
     }
 }
 
@@ -329,15 +418,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_mem_size() {
-        // Sanity check that `Option<Node>` behaves the same as
-        // `Option<Box<[Option<Node>; 7]>>` in that it uses `NULL` to
-        // represent the `None` variant.
-        assert_eq!(size_of::<Option<Node>>(), size_of::<*const ()>());
-        assert_eq!(
-            size_of::<Option<Node>>(),
-            size_of::<Option<Box<[Option<Node>; 7]>>>()
-        );
-    }
+    // #[test]
+    // fn test_mem_size() {
+    //     // Sanity check that `Option<Node>` behaves the same as
+    //     // `Option<Box<[Option<Node>; 7]>>` in that it uses `NULL` to
+    //     // represent the `None` variant.
+    //     assert_eq!(size_of::<Option<Node>>(), size_of::<*const ()>());
+    //     assert_eq!(
+    //         size_of::<Option<Node>>(),
+    //         size_of::<Option<Box<[Option<Node>; 7]>>>()
+    //     );
+    // }
 }
