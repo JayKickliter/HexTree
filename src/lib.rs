@@ -175,7 +175,7 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-struct Node(Box<[Option<Node>; 7]>);
+struct Node([Option<Box<Node>>; 7]);
 
 impl Node {
     fn mem_size(&self) -> usize {
@@ -183,7 +183,7 @@ impl Node {
     }
 
     fn new() -> Self {
-        Self(Box::new([None, None, None, None, None, None, None]))
+        Self([None, None, None, None, None, None, None])
     }
 
     fn len(&self) -> usize {
@@ -201,16 +201,16 @@ impl Node {
                 None => {
                     let mut node = Node::new();
                     node.insert(digits);
-                    self[digit as usize] = Some(node);
+                    self[digit as usize] = Some(Box::new(node));
                 }
             },
-            None => *self.0 = [None, None, None, None, None, None, None],
+            None => self.0 = [None, None, None, None, None, None, None],
         };
         self.coalesce();
     }
 
     fn coalesce(&mut self) {
-        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = &*self.0 {
+        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = &self.0 {
             if n0.is_full()
                 && n1.is_full()
                 && n2.is_full()
@@ -219,7 +219,7 @@ impl Node {
                 && n5.is_full()
                 && n6.is_full()
             {
-                *self.0 = [None, None, None, None, None, None, None]
+                self.0 = [None, None, None, None, None, None, None]
             }
         };
     }
@@ -249,7 +249,7 @@ impl Node {
 }
 
 impl Deref for Node {
-    type Target = [Option<Node>];
+    type Target = [Option<Box<Node>>];
 
     fn deref(&self) -> &Self::Target {
         &self.0[..]
@@ -327,17 +327,5 @@ mod tests {
             let digits = Digits::new(cell).collect::<Vec<u8>>();
             assert_eq!(&&digits, ref_digits);
         }
-    }
-
-    #[test]
-    fn test_mem_size() {
-        // Sanity check that `Option<Node>` behaves the same as
-        // `Option<Box<[Option<Node>; 7]>>` in that it uses `NULL` to
-        // represent the `None` variant.
-        assert_eq!(size_of::<Option<Node>>(), size_of::<*const ()>());
-        assert_eq!(
-            size_of::<Option<Node>>(),
-            size_of::<Option<Box<[Option<Node>; 7]>>>()
-        );
     }
 }
