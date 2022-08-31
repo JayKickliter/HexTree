@@ -166,8 +166,8 @@ fn test_compaction() {
 
     assert!(!us915_tree.contains(&gulf_of_mexico));
     assert!(!us915_nocompact_tree.contains(&gulf_of_mexico));
-    us915_tree.insert(gulf_of_mexico);
-    us915_nocompact_tree.insert(gulf_of_mexico);
+    us915_tree.insert(gulf_of_mexico, ());
+    us915_nocompact_tree.insert(gulf_of_mexico, ());
     assert!(us915_tree.contains(&gulf_of_mexico));
     assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
