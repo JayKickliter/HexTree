@@ -70,7 +70,7 @@ pub struct HexMap<V> {
 /// A HexSet is HexMap with no value.
 pub type HexSet = HexMap<()>;
 
-impl<V: Clone + std::cmp::PartialEq> HexMap<V> {
+impl<V: Clone + PartialEq> HexMap<V> {
     /// Constructs a new, empty `HexMap`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
@@ -183,7 +183,7 @@ enum Node<V> {
     Leaf(V),
 }
 
-impl<V: Clone + std::cmp::PartialEq> Node<V> {
+impl<V: Clone + PartialEq> Node<V> {
     fn mem_size(&self) -> usize {
         mem::size_of::<Self>()
             + match self {
@@ -315,7 +315,7 @@ impl Iterator for Digits {
     }
 }
 
-impl<V: Clone + std::cmp::PartialEq> Default for HexMap<V> {
+impl<V: Clone + PartialEq> Default for HexMap<V> {
     fn default() -> Self {
         HexMap::new()
     }
