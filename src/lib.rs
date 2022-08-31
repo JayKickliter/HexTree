@@ -1,14 +1,14 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! A HexSet is a structure for representing geographical regions and
+//! A HexMap is a structure for representing geographical regions and
 //! efficiently testing performing hit-tests on that region. Or, in
 //! other words: I have a region defined; does it contain this
 //! point on earth?
 //!
 //! # Features
 //!
-//! * **`serde-support`**: support for \[de\]serializing a HexSet via [serde].
+//! * **`serde-support`**: support for \[de\]serializing a HexMap via [serde].
 //!
 //! [serde]: https://docs.rs/serde/latest/serde/
 //!
@@ -18,7 +18,7 @@
 //!
 //! ----
 //!
-//! Let's create a HexSet for Monaco as visualized in the map
+//! Let's create a HexMap for Monaco as visualized in the map
 //!
 //! ```
 //! # use hexset::h3ron::Error;
@@ -53,7 +53,7 @@
 
 pub use h3ron;
 use h3ron::{H3Cell, Index};
-use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
+use std::{cmp::PartialEq, iter::FromIterator, mem};
 
 /// An efficient way to represent any portion(s) of Earth as a set of
 /// `H3` hexagons.
@@ -62,13 +62,16 @@ use std::{iter::FromIterator, mem::size_of, ops::Deref, ops::DerefMut};
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-pub struct HexSet {
+pub struct HexMap<V> {
     /// All h3 0 base cell indices in the tree
-    nodes: Box<[Option<Node>]>,
+    nodes: Box<[Option<Node<V>>]>,
 }
 
-impl HexSet {
-    /// Constructs a new, empty `HexSet`.
+/// A HexSet is HexMap with no value.
+pub type HexSet = HexMap<()>;
+
+impl<V: Clone + std::cmp::PartialEq> HexMap<V> {
+    /// Constructs a new, empty `HexMap`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -94,14 +97,14 @@ impl HexSet {
     }
 
     /// Adds a hexagon to the set.
-    pub fn insert(&mut self, hex: H3Cell) {
+    pub fn insert(&mut self, hex: H3Cell, value: V) {
         let base_cell = base(&hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(digits),
+            Some(node) => node.insert(digits, value),
             None => {
                 let mut node = Node::new();
-                node.insert(digits);
+                node.insert(digits, value);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -134,7 +137,7 @@ impl HexSet {
     /// Note: The actual total may be higher than reported due to
     ///       memory alignment.
     pub fn mem_size(&self) -> usize {
-        size_of::<Self>()
+        mem::size_of::<Self>()
             + self
                 .nodes
                 .iter()
@@ -144,27 +147,27 @@ impl HexSet {
     }
 }
 
-impl FromIterator<H3Cell> for HexSet {
+impl FromIterator<H3Cell> for HexMap<()> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = H3Cell>,
     {
-        let mut set = HexSet::new();
+        let mut set = HexMap::new();
         for cell in iter {
-            set.insert(cell);
+            set.insert(cell, ());
         }
         set
     }
 }
 
-impl<'a> FromIterator<&'a H3Cell> for HexSet {
+impl<'a> FromIterator<&'a H3Cell> for HexMap<()> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = &'a H3Cell>,
     {
-        let mut set = HexSet::new();
+        let mut set = HexMap::new();
         for cell in iter {
-            set.insert(*cell);
+            set.insert(*cell, ());
         }
         set
     }
@@ -175,57 +178,88 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-struct Node([Option<Box<Node>>; 7]);
+enum Node<V> {
+    Parent([Option<Box<Node<V>>>; 7]),
+    Leaf(V),
+}
 
-impl Node {
+impl<V: Clone + std::cmp::PartialEq> Node<V> {
     fn mem_size(&self) -> usize {
-        size_of::<Self>() + self.iter().flatten().map(|n| n.mem_size()).sum::<usize>()
+        mem::size_of::<Self>()
+            + match self {
+                Self::Leaf(_) => 0,
+                Self::Parent(children) => children
+                    .iter()
+                    .flatten()
+                    .map(|n| n.mem_size())
+                    .sum::<usize>(),
+            }
     }
 
     fn new() -> Self {
-        Self([None, None, None, None, None, None, None])
+        Self::Parent([None, None, None, None, None, None, None])
     }
 
     fn len(&self) -> usize {
-        if self.is_full() {
-            1
-        } else {
-            self.iter().flatten().map(|child| child.len()).sum()
+        match self {
+            Self::Leaf(_) => 1,
+            Self::Parent(children) => children.iter().flatten().map(|child| child.len()).sum(),
         }
     }
 
-    fn insert(&mut self, mut digits: Digits) {
+    fn insert(&mut self, mut digits: Digits, value: V) {
         match digits.next() {
-            Some(digit) => match self[digit as usize].as_mut() {
-                Some(node) => node.insert(digits),
-                None => {
-                    let mut node = Node::new();
-                    node.insert(digits);
-                    self[digit as usize] = Some(Box::new(node));
+            None => *self = Self::Leaf(value),
+            Some(digit) => match self {
+                Self::Leaf(_) => return,
+                Self::Parent(children) => {
+                    match children[digit as usize].as_mut() {
+                        Some(node) => node.insert(digits, value),
+                        None => {
+                            let mut node = Node::new();
+                            node.insert(digits, value);
+                            children[digit as usize] = Some(Box::new(node));
+                        }
+                    };
                 }
             },
-            None => self.0 = [None, None, None, None, None, None, None],
         };
         self.coalesce();
     }
 
     fn coalesce(&mut self) {
-        if let [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)] = &self.0 {
-            if n0.is_full()
-                && n1.is_full()
-                && n2.is_full()
-                && n3.is_full()
-                && n4.is_full()
-                && n5.is_full()
-                && n6.is_full()
-            {
-                self.0 = [None, None, None, None, None, None, None]
+        if let Self::Parent(
+            [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)],
+        ) = self
+        {
+            match (
+                n0.value(),
+                n1.value(),
+                n2.value(),
+                n3.value(),
+                n4.value(),
+                n5.value(),
+                n6.value(),
+            ) {
+                (Some(v0), Some(v1), Some(v2), Some(v3), Some(v4), Some(v5), Some(v6))
+                    if v0 == v1 && v1 == v2 && v2 == v3 && v3 == v4 && v4 == v5 && v5 == v6 =>
+                {
+                    *self = Self::Leaf(v0.clone())
+                }
+                _ => (),
             }
         };
     }
 
     fn is_full(&self) -> bool {
-        self.iter().all(|c| c.is_none())
+        matches!(self, Self::Leaf(_))
+    }
+
+    fn value(&self) -> Option<&V> {
+        match self {
+            Self::Leaf(value) => Some(value),
+            _ => None,
+        }
     }
 
     fn contains(&self, mut digits: Digits) -> bool {
@@ -233,32 +267,19 @@ impl Node {
             return true;
         }
 
-        match digits.next() {
-            Some(digit) => {
+        match (digits.next(), self) {
+            (_, Self::Leaf(_)) => true,
+            (Some(digit), Self::Parent(children)) => {
                 // TODO check if this node is "full"
-                match &self[digit as usize] {
+                match &children.as_slice()[digit as usize] {
                     Some(node) => node.contains(digits),
                     None => false,
                 }
             }
             // No digits left, but `self` isn't full, so this hex
             // can't fully contain the target.
-            None => false,
+            (None, Self::Parent(_)) => false,
         }
-    }
-}
-
-impl Deref for Node {
-    type Target = [Option<Box<Node>>];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0[..]
-    }
-}
-
-impl DerefMut for Node {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0[..]
     }
 }
 
@@ -294,9 +315,9 @@ impl Iterator for Digits {
     }
 }
 
-impl Default for HexSet {
+impl<V: Clone + std::cmp::PartialEq> Default for HexMap<V> {
     fn default() -> Self {
-        HexSet::new()
+        HexMap::new()
     }
 }
 
