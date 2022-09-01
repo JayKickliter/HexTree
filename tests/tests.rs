@@ -2,7 +2,7 @@ use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hexset::{
     h3ron::{H3Cell, Index},
-    HexSet,
+    HexMap, HexSet,
 };
 use std::convert::TryFrom;
 
@@ -54,6 +54,76 @@ fn all_up() {
     assert!(!naive_contains(&us915_cells, paris));
 
     assert!(us915_cells.iter().all(|cell| us915_tree.contains(cell)));
+}
+
+#[test]
+fn mono_hexmap() {
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Region {
+        AS923_1,
+        AS923_1B,
+        AS923_2,
+        AS923_3,
+        AS923_4,
+        AU915,
+        CN470,
+        EU433,
+        EU868,
+        IN865,
+        KR920,
+        RU864,
+        US915,
+    }
+    use Region::*;
+
+    let regions = &[
+        (AS923_1, regions::nocompact::AS923_1),
+        (AS923_1B, regions::nocompact::AS923_1B),
+        (AS923_2, regions::nocompact::AS923_2),
+        (AS923_3, regions::nocompact::AS923_3),
+        (AS923_4, regions::nocompact::AS923_4),
+        (AU915, regions::nocompact::AU915),
+        (CN470, regions::nocompact::CN470),
+        (EU433, regions::nocompact::EU433),
+        (EU868, regions::nocompact::EU868),
+        (IN865, regions::nocompact::IN865),
+        (KR920, regions::nocompact::KR920),
+        (RU864, regions::nocompact::RU864),
+        (US915, regions::nocompact::US915),
+    ];
+
+    let mut monomap = HexMap::new();
+    let mut total_cells = 0;
+    for (name, cells) in regions.iter() {
+        total_cells += cells.len();
+        for cell in cells.iter() {
+            monomap.insert(H3Cell::new(*cell), name);
+        }
+    }
+    println!(
+        "total # of not-precompacted source cells for all {} regions: {}",
+        regions.len(),
+        total_cells
+    );
+    println!(
+        "monomap.len() == {}: {}",
+        monomap.len(),
+        bench(|| monomap.len())
+    );
+    for (name, cells) in regions.iter() {
+        println!(
+            "monomap.get() returns correct region for all {} {:?} cells: {}",
+            cells.len(),
+            name,
+            bench(|| cells
+                .iter()
+                .all(|c| monomap.get(&H3Cell::new(*c)) == Some(&name)))
+        );
+
+        assert!(cells
+            .iter()
+            .all(|c| monomap.get(&H3Cell::new(*c)) == Some(&name)));
+    }
 }
 
 #[test]
