@@ -132,6 +132,18 @@ impl<V: Clone + PartialEq> HexMap<V> {
         }
     }
 
+    /// Returns a reference to the value corresponding to the given hex.
+    pub fn get(&self, hex: &H3Cell) -> Option<&V> {
+        let base_cell = base(hex);
+        match self.nodes[base_cell as usize].as_ref() {
+            Some(node) => {
+                let digits = Digits::new(*hex);
+                node.get(digits)
+            }
+            None => None,
+        }
+    }
+
     /// Returns the current memory use of this set.
     ///
     /// Note: The actual total may be higher than reported due to
@@ -262,6 +274,7 @@ impl<V: Clone + PartialEq> Node<V> {
         }
     }
 
+    #[inline]
     fn contains(&self, mut digits: Digits) -> bool {
         if self.is_full() {
             return true;
@@ -279,6 +292,26 @@ impl<V: Clone + PartialEq> Node<V> {
             // No digits left, but `self` isn't full, so this hex
             // can't fully contain the target.
             (None, Self::Parent(_)) => false,
+        }
+    }
+
+    fn get(&self, mut digits: Digits) -> Option<&V> {
+        if let Self::Leaf(val) = self {
+            return Some(val);
+        }
+
+        match (digits.next(), self) {
+            (_, Self::Leaf(_)) => unreachable!(),
+            (Some(digit), Self::Parent(children)) => {
+                // TODO check if this node is "full"
+                match &children.as_slice()[digit as usize] {
+                    Some(node) => node.get(digits),
+                    None => None,
+                }
+            }
+            // No digits left, but `self` isn't full, so this hex
+            // can't fully contain the target.
+            (None, Self::Parent(_)) => None,
         }
     }
 }
