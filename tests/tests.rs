@@ -2,7 +2,7 @@ use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hexset::{
     h3ron::{H3Cell, Index},
-    HexMap, HexSet,
+    EqCompactor, HexMap, HexSet, SetCompactor,
 };
 use std::convert::TryFrom;
 
@@ -97,7 +97,7 @@ fn mono_hexmap() {
     for (name, cells) in regions.iter() {
         total_cells += cells.len();
         for cell in cells.iter() {
-            monomap.insert(H3Cell::new(*cell), name);
+            monomap.insert_and_compact(H3Cell::new(*cell), name, EqCompactor);
         }
     }
     println!(
@@ -147,8 +147,8 @@ fn test_compaction() {
 
     assert!(!us915_tree.contains(&gulf_of_mexico));
     assert!(!us915_nocompact_tree.contains(&gulf_of_mexico));
-    us915_tree.insert(gulf_of_mexico, ());
-    us915_nocompact_tree.insert(gulf_of_mexico, ());
+    us915_tree.insert_and_compact(gulf_of_mexico, (), SetCompactor);
+    us915_nocompact_tree.insert_and_compact(gulf_of_mexico, (), SetCompactor);
     assert!(us915_tree.contains(&gulf_of_mexico));
     assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());

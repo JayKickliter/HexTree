@@ -70,7 +70,7 @@ pub struct HexMap<V> {
 /// A HexSet is HexMap with no value.
 pub type HexSet = HexMap<()>;
 
-impl<V: Clone + PartialEq> HexMap<V> {
+impl<V: Clone> HexMap<V> {
     /// Constructs a new, empty `HexMap`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
@@ -105,6 +105,23 @@ impl<V: Clone + PartialEq> HexMap<V> {
             None => {
                 let mut node = Node::new();
                 node.insert(digits, value);
+                self.nodes[base_cell as usize] = Some(node);
+            }
+        }
+    }
+
+    /// Adds a hexagon to the set and run provided compaction routine.
+    pub fn insert_and_compact<C>(&mut self, hex: H3Cell, value: V, mut compactor: C)
+    where
+        C: Compactor<V>,
+    {
+        let base_cell = base(&hex);
+        let digits = Digits::new(hex);
+        match self.nodes[base_cell as usize].as_mut() {
+            Some(node) => node.insert_and_compact(0, digits, value, &mut compactor),
+            None => {
+                let mut node = Node::new();
+                node.insert_and_compact(0, digits, value, &mut compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -159,27 +176,27 @@ impl<V: Clone + PartialEq> HexMap<V> {
     }
 }
 
-impl FromIterator<H3Cell> for HexMap<()> {
+impl FromIterator<H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = H3Cell>,
     {
         let mut set = HexMap::new();
         for cell in iter {
-            set.insert(cell, ());
+            set.insert_and_compact(cell, (), SetCompactor);
         }
         set
     }
 }
 
-impl<'a> FromIterator<&'a H3Cell> for HexMap<()> {
+impl<'a> FromIterator<&'a H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = &'a H3Cell>,
     {
         let mut set = HexMap::new();
         for cell in iter {
-            set.insert(*cell, ());
+            set.insert_and_compact(*cell, (), SetCompactor);
         }
         set
     }
@@ -195,7 +212,7 @@ enum Node<V> {
     Leaf(V),
 }
 
-impl<V: Clone + PartialEq> Node<V> {
+impl<V> Node<V> {
     fn mem_size(&self) -> usize {
         mem::size_of::<Self>()
             + match self {
@@ -223,7 +240,7 @@ impl<V: Clone + PartialEq> Node<V> {
         match digits.next() {
             None => *self = Self::Leaf(value),
             Some(digit) => match self {
-                Self::Leaf(_) => return,
+                Self::Leaf(_) => (),
                 Self::Parent(children) => {
                     match children[digit as usize].as_mut() {
                         Some(node) => node.insert(digits, value),
@@ -236,29 +253,48 @@ impl<V: Clone + PartialEq> Node<V> {
                 }
             },
         };
-        self.coalesce();
     }
 
-    fn coalesce(&mut self) {
-        if let Self::Parent(
-            [Some(n0), Some(n1), Some(n2), Some(n3), Some(n4), Some(n5), Some(n6)],
-        ) = self
-        {
-            match (
-                n0.value(),
-                n1.value(),
-                n2.value(),
-                n3.value(),
-                n4.value(),
-                n5.value(),
-                n6.value(),
-            ) {
-                (Some(v0), Some(v1), Some(v2), Some(v3), Some(v4), Some(v5), Some(v6))
-                    if v0 == v1 && v1 == v2 && v2 == v3 && v3 == v4 && v4 == v5 && v5 == v6 =>
-                {
-                    *self = Self::Leaf(v0.clone())
+    fn insert_and_compact<C>(&mut self, res: u8, mut digits: Digits, value: V, compactor: &mut C)
+    where
+        C: Compactor<V>,
+    {
+        match digits.next() {
+            None => *self = Self::Leaf(value),
+            Some(digit) => match self {
+                Self::Leaf(_) => return,
+                Self::Parent(children) => {
+                    match children[digit as usize].as_mut() {
+                        Some(node) => node.insert_and_compact(res + 1, digits, value, compactor),
+                        None => {
+                            let mut node = Node::new();
+                            node.insert_and_compact(res + 1, digits, value, compactor);
+                            children[digit as usize] = Some(Box::new(node));
+                        }
+                    };
                 }
-                _ => (),
+            },
+        };
+        self.coalesce(res, compactor);
+    }
+
+    fn coalesce<C>(&mut self, res: u8, compactor: &mut C)
+    where
+        C: Compactor<V>,
+    {
+        if let Self::Parent(children) = self {
+            if children
+                .iter()
+                .any(|n| matches!(n.as_ref().map(|n| n.as_ref()), Some(Self::Parent(_))))
+            {
+                return;
+            }
+            let mut arr: [Option<&V>; 7] = [None, None, None, None, None, None, None];
+            for (v, n) in arr.iter_mut().zip(children.iter()) {
+                *v = n.as_ref().map(|n| n.as_ref()).and_then(Node::value);
+            }
+            if let Some(value) = compactor.compact(res, arr) {
+                *self = Self::Leaf(value)
             }
         };
     }
@@ -359,6 +395,39 @@ fn base(cell: &H3Cell) -> u8 {
     let index = cell.h3index();
     let base = (index >> 0x2D) & 0b111_1111;
     base as u8
+}
+
+/// A user provided compactor.
+pub trait Compactor<V> {
+    /// Compact the thing.
+    fn compact(&mut self, res: u8, children: [Option<&V>; 7]) -> Option<V>;
+}
+
+/// Compacts when all children are complete.
+pub struct SetCompactor;
+
+impl Compactor<()> for SetCompactor {
+    fn compact(&mut self, _res: u8, children: [Option<&()>; 7]) -> Option<()> {
+        if children.iter().all(Option::is_some) {
+            Some(())
+        } else {
+            None
+        }
+    }
+}
+
+/// Compacts when all children are complete and have the same value.
+pub struct EqCompactor;
+
+impl<V: PartialEq + Clone> Compactor<V> for EqCompactor {
+    fn compact(&mut self, _res: u8, children: [Option<&V>; 7]) -> Option<V> {
+        if let [Some(v0), Some(v1), Some(v2), Some(v3), Some(v4), Some(v5), Some(v6)] = children {
+            if v0 == v1 && v1 == v2 && v2 == v3 && v3 == v4 && v4 == v5 && v5 == v6 {
+                return Some(v0.clone());
+            }
+        };
+        None
+    }
 }
 
 #[cfg(test)]
