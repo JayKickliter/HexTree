@@ -41,8 +41,8 @@
 //!
 //! // You can see in the map above that our set covers Point 1 (green
 //! // check) but not Point 2 (red x), let's test that.
-//! let point_1 = H3Cell::from_coordinate(&coord! {x: 7.42418, y: 43.73631}, 12)?;
-//! let point_2 = H3Cell::from_coordinate(&coord! {x: 7.42855, y: 43.73008}, 12)?;
+//! let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
+//! let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 //!
 //! assert!(monaco.contains(&point_1));
 //! assert!(!monaco.contains(&point_2));
