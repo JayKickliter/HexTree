@@ -430,6 +430,15 @@ impl<V: PartialEq + Clone> Compactor<V> for EqCompactor {
     }
 }
 
+impl<V, F> Compactor<V> for F
+where
+    F: FnMut(u8, [Option<&V>; 7]) -> Option<V>,
+{
+    fn compact(&mut self, res: u8, children: [Option<&V>; 7]) -> Option<V> {
+        self(res, children)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
