@@ -37,29 +37,6 @@ fn from_indicies(indicies: &[u64]) -> (HexSet, Vec<H3Cell>) {
 }
 
 #[test]
-fn time_creation() {
-    let compacted_us915: Vec<H3Cell> = regions::compact::US915
-        .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
-        .collect();
-    let plain_us915: Vec<H3Cell> = regions::nocompact::US915
-        .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
-        .collect();
-    use std::time;
-    let start = time::Instant::now();
-    let us915_from_compacted_cells: HexSet = compacted_us915.iter().collect();
-    let duration = time::Instant::now() - start;
-    println!("US915 from precompacted cells {} ms", duration.as_millis());
-
-    let start = time::Instant::now();
-    let us915_from_plain_cells: HexSet = plain_us915.iter().collect();
-    let duration = time::Instant::now() - start;
-    println!("US915 from plain cells {} ms", duration.as_millis());
-    assert!(us915_from_compacted_cells == us915_from_plain_cells);
-}
-
-#[test]
 fn all_up() {
     let (us915_tree, us915_cells) = from_indicies(regions::compact::US915);
     assert_eq!(us915_tree.len(), us915_cells.len());
