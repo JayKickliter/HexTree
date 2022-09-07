@@ -37,6 +37,29 @@ fn from_indicies(indicies: &[u64]) -> (HexSet, Vec<H3Cell>) {
 }
 
 #[test]
+fn time_creation() {
+    let compacted_us915: Vec<H3Cell> = regions::compact::US915
+        .iter()
+        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .collect();
+    let plain_us915: Vec<H3Cell> = regions::nocompact::US915
+        .iter()
+        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .collect();
+    use std::time;
+    let start = time::Instant::now();
+    let us915_from_compacted_cells: HexSet = compacted_us915.iter().collect();
+    let duration = time::Instant::now() - start;
+    println!("US915 from precompacted cells {} ms", duration.as_millis());
+
+    let start = time::Instant::now();
+    let us915_from_plain_cells: HexSet = plain_us915.iter().collect();
+    let duration = time::Instant::now() - start;
+    println!("US915 from plain cells {} ms", duration.as_millis());
+    assert!(us915_from_compacted_cells == us915_from_plain_cells);
+}
+
+#[test]
 fn all_up() {
     let (us915_tree, us915_cells) = from_indicies(regions::compact::US915);
     assert_eq!(us915_tree.len(), us915_cells.len());
@@ -54,7 +77,7 @@ fn all_up() {
     assert!(!us915_tree.contains(&paris));
     assert!(!naive_contains(&us915_cells, paris));
 
-    assert!(us915_cells.iter().all(|cell| us915_tree.contains(&*cell)));
+    assert!(us915_cells.iter().all(|cell| us915_tree.contains(cell)));
 
     println!(
         "new from us915: {}",
@@ -87,7 +110,7 @@ fn all_up() {
 
     println!(
         "us915_cells.iter().all(|cell| us915.contains(&*cell)): {}",
-        bench(|| us915_cells.iter().all(|cell| us915_tree.contains(&*cell)))
+        bench(|| us915_cells.iter().all(|cell| us915_tree.contains(cell)))
     );
 }
 
@@ -114,9 +137,9 @@ fn all_regions() {
         for (name_b, (_tree_b, cells_b)) in regions.iter() {
             if name_a == name_b {
                 assert_eq!(tree_a.len(), cells_a.len());
-                assert!(cells_a.iter().all(|cell| tree_a.contains(&*cell)));
+                assert!(cells_a.iter().all(|cell| tree_a.contains(cell)));
             } else {
-                assert!(!cells_b.iter().any(|cell| tree_a.contains(&*cell)));
+                assert!(!cells_b.iter().any(|cell| tree_a.contains(cell)));
             }
         }
     }
