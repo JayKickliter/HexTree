@@ -1,4 +1,3 @@
-use easybench::bench;
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hexset::{
@@ -55,40 +54,6 @@ fn all_up() {
     assert!(!naive_contains(&us915_cells, paris));
 
     assert!(us915_cells.iter().all(|cell| us915_tree.contains(cell)));
-
-    println!(
-        "new from us915: {}",
-        bench(|| us915_cells.iter().collect::<HexSet>())
-    );
-    println!(
-        "naive_contains(&us915_cells, tarpon_springs): {}",
-        bench(|| naive_contains(&us915_cells, tarpon_springs))
-    );
-    println!(
-        "us915.contains(&tarpon_springs): {}",
-        bench(|| us915_tree.contains(&tarpon_springs))
-    );
-    println!(
-        "naive_contains(&us915_cells, gulf_of_mexico): {}",
-        bench(|| naive_contains(&us915_cells, gulf_of_mexico))
-    );
-    println!(
-        "us915.contains(&gulf_of_mexico): {}",
-        bench(|| us915_tree.contains(&tarpon_springs))
-    );
-    println!(
-        "naive_contains(&us915_cells, paris): {}",
-        bench(|| naive_contains(&us915_cells, paris))
-    );
-    println!(
-        "us915.contains(&paris): {}",
-        bench(|| us915_tree.contains(&paris))
-    );
-
-    println!(
-        "us915_cells.iter().all(|cell| us915.contains(&*cell)): {}",
-        bench(|| us915_cells.iter().all(|cell| us915_tree.contains(cell)))
-    );
 }
 
 #[test]
