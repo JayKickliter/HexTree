@@ -19,6 +19,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features -- -Dclippy::all
       - name: Build
-        run: cargo build --all-features
+        run: cargo build --all-features --all-targets
       - name: Check formatting
         run: cargo fmt --check
