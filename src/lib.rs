@@ -302,10 +302,6 @@ impl<V> Node<V> {
         };
     }
 
-    fn is_full(&self) -> bool {
-        matches!(self, Self::Leaf(_))
-    }
-
     fn value(&self) -> Option<&V> {
         match self {
             Self::Leaf(value) => Some(value),
@@ -315,10 +311,6 @@ impl<V> Node<V> {
 
     #[inline]
     fn contains(&self, mut digits: Digits) -> bool {
-        if self.is_full() {
-            return true;
-        }
-
         match (digits.next(), self) {
             (_, Self::Leaf(_)) => true,
             (Some(digit), Self::Parent(children)) => {
