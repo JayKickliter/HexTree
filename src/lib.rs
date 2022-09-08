@@ -70,14 +70,17 @@ pub struct HexMap<V> {
 /// A HexSet is HexMap with no value.
 pub type HexSet = HexMap<()>;
 
-impl<V: Clone> HexMap<V> {
+impl<V> HexMap<V> {
     /// Constructs a new, empty `HexMap`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
     pub fn new() -> Self {
         Self {
-            nodes: vec![None; 122].into_boxed_slice(),
+            nodes: std::iter::repeat_with(|| None)
+                .take(122)
+                .collect::<Vec<Option<Node<V>>>>()
+                .into_boxed_slice(),
         }
     }
 
@@ -384,7 +387,7 @@ impl Iterator for Digits {
     }
 }
 
-impl<V: Clone + PartialEq> Default for HexMap<V> {
+impl<V: PartialEq> Default for HexMap<V> {
     fn default() -> Self {
         HexMap::new()
     }
