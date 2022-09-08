@@ -57,37 +57,6 @@ fn all_up() {
 }
 
 #[test]
-fn all_regions() {
-    let regions = &[
-        ("AS923_1", from_indicies(regions::compact::AS923_1)),
-        ("AS923_1B", from_indicies(regions::compact::AS923_1B)),
-        ("AS923_2", from_indicies(regions::compact::AS923_2)),
-        ("AS923_3", from_indicies(regions::compact::AS923_3)),
-        ("AS923_4", from_indicies(regions::compact::AS923_4)),
-        ("AU915", from_indicies(regions::compact::AU915)),
-        ("CN470", from_indicies(regions::compact::CN470)),
-        ("EU433", from_indicies(regions::compact::EU433)),
-        ("EU868", from_indicies(regions::compact::EU868)),
-        ("IN865", from_indicies(regions::compact::IN865)),
-        ("KR920", from_indicies(regions::compact::KR920)),
-        ("RU864", from_indicies(regions::compact::RU864)),
-        ("US915", from_indicies(regions::compact::US915)),
-    ];
-
-    // Do membership tests across the cartesian product off all regions
-    for (name_a, (tree_a, cells_a)) in regions.iter() {
-        for (name_b, (_tree_b, cells_b)) in regions.iter() {
-            if name_a == name_b {
-                assert_eq!(tree_a.len(), cells_a.len());
-                assert!(cells_a.iter().all(|cell| tree_a.contains(cell)));
-            } else {
-                assert!(!cells_b.iter().any(|cell| tree_a.contains(cell)));
-            }
-        }
-    }
-}
-
-#[test]
 fn test_compaction() {
     let (mut us915_tree, us915_cells) = from_indicies(regions::compact::US915);
     let (mut us915_nocompact_tree, us915_nocompact_cells) =

@@ -30,7 +30,12 @@ byteorder = "*"
 criterion = { version = "0.3", features = ["html_reports"] }
 easybench = "1"
 geo-types = "*"
-h3-lorawan-regions = { git = "https://github.com/JayKickliter/h3-lorawan-regions.git", branch = "main" }
+
+[dev-dependencies.h3-lorawan-regions]
+git = "https://github.com/JayKickliter/h3-lorawan-regions.git"
+rev = "7eead0c263bfc4fc482b3e46e6d9f221f8253b82"
+default-features = false
+features = ["compact", "nocompact", "US915"]
 
 [[bench]]
 name = "benches"
