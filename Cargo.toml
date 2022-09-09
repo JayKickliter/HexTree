@@ -28,7 +28,6 @@ serde = { version = "1", optional = true, features = ["derive"] }
 [dev-dependencies]
 byteorder = "*"
 criterion = { version = "0.3", features = ["html_reports"] }
-easybench = "1"
 geo-types = "*"
 
 [dev-dependencies.h3-lorawan-regions]
