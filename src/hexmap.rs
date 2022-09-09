@@ -4,7 +4,7 @@ use crate::{
     h3ron::H3Cell,
     node::Node,
 };
-use std::{cmp::PartialEq, mem};
+use std::{cmp::PartialEq, iter::FromIterator, mem};
 
 /// An efficient way to represent any portion(s) of Earth as a set of
 /// `H3` hexagons.
@@ -130,5 +130,59 @@ impl<V> HexMap<V> {
 impl<V: PartialEq> Default for HexMap<V> {
     fn default() -> Self {
         HexMap::new()
+    }
+}
+
+impl<V> FromIterator<(H3Cell, V)> for HexMap<V> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (H3Cell, V)>,
+    {
+        let mut map = HexMap::new();
+        for (cell, value) in iter {
+            map.insert(cell, value);
+        }
+        map
+    }
+}
+
+impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (&'a H3Cell, &'a V)>,
+    {
+        let mut map = HexMap::new();
+        for (cell, value) in iter {
+            map.insert(*cell, *value);
+        }
+        map
+    }
+}
+
+impl<V, C: Compactor<V>> FromIterator<(H3Cell, V, C)> for HexMap<V> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (H3Cell, V, C)>,
+    {
+        let mut map = HexMap::new();
+        for (cell, value, compactor) in iter {
+            map.insert_and_compact(cell, value, compactor);
+        }
+        map
+    }
+}
+
+impl<'a, V: Copy + 'a, C: Compactor<V> + Copy + 'a> FromIterator<(&'a H3Cell, &'a V, &'a C)>
+    for HexMap<V>
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (&'a H3Cell, &'a V, &'a C)>,
+    {
+        let mut map = HexMap::new();
+        for (cell, value, compactor) in iter {
+            map.insert_and_compact(*cell, *value, *compactor);
+        }
+        map
     }
 }
