@@ -1,8 +1,10 @@
 use geo_types::coord;
 use h3_lorawan_regions as regions;
-use hexset::{
+use hexmap::{
+    compactor::EqCompactor,
+    compactor::SetCompactor,
     h3ron::{H3Cell, Index},
-    EqCompactor, HexMap, HexSet, SetCompactor,
+    HexMap, HexSet,
 };
 use std::convert::TryFrom;
 

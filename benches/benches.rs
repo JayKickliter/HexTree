@@ -3,7 +3,7 @@ use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
-use hexset::{h3ron::H3Cell, HexSet};
+use hexmap::{h3ron::H3Cell, HexSet};
 use std::convert::TryFrom;
 
 fn hexset_lookup(c: &mut Criterion) {
