@@ -1,4 +1,3 @@
-use easybench::bench;
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hexset::{
@@ -37,29 +36,6 @@ fn from_indicies(indicies: &[u64]) -> (HexSet, Vec<H3Cell>) {
 }
 
 #[test]
-fn time_creation() {
-    let compacted_us915: Vec<H3Cell> = regions::compact::US915
-        .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
-        .collect();
-    let plain_us915: Vec<H3Cell> = regions::nocompact::US915
-        .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
-        .collect();
-    use std::time;
-    let start = time::Instant::now();
-    let us915_from_compacted_cells: HexSet = compacted_us915.iter().collect();
-    let duration = time::Instant::now() - start;
-    println!("US915 from precompacted cells {} ms", duration.as_millis());
-
-    let start = time::Instant::now();
-    let us915_from_plain_cells: HexSet = plain_us915.iter().collect();
-    let duration = time::Instant::now() - start;
-    println!("US915 from plain cells {} ms", duration.as_millis());
-    assert!(us915_from_compacted_cells == us915_from_plain_cells);
-}
-
-#[test]
 fn all_up() {
     let (us915_tree, us915_cells) = from_indicies(regions::compact::US915);
     assert_eq!(us915_tree.len(), us915_cells.len());
@@ -78,71 +54,6 @@ fn all_up() {
     assert!(!naive_contains(&us915_cells, paris));
 
     assert!(us915_cells.iter().all(|cell| us915_tree.contains(cell)));
-
-    println!(
-        "new from us915: {}",
-        bench(|| us915_cells.iter().collect::<HexSet>())
-    );
-    println!(
-        "naive_contains(&us915_cells, tarpon_springs): {}",
-        bench(|| naive_contains(&us915_cells, tarpon_springs))
-    );
-    println!(
-        "us915.contains(&tarpon_springs): {}",
-        bench(|| us915_tree.contains(&tarpon_springs))
-    );
-    println!(
-        "naive_contains(&us915_cells, gulf_of_mexico): {}",
-        bench(|| naive_contains(&us915_cells, gulf_of_mexico))
-    );
-    println!(
-        "us915.contains(&gulf_of_mexico): {}",
-        bench(|| us915_tree.contains(&tarpon_springs))
-    );
-    println!(
-        "naive_contains(&us915_cells, paris): {}",
-        bench(|| naive_contains(&us915_cells, paris))
-    );
-    println!(
-        "us915.contains(&paris): {}",
-        bench(|| us915_tree.contains(&paris))
-    );
-
-    println!(
-        "us915_cells.iter().all(|cell| us915.contains(&*cell)): {}",
-        bench(|| us915_cells.iter().all(|cell| us915_tree.contains(cell)))
-    );
-}
-
-#[test]
-fn all_regions() {
-    let regions = &[
-        ("AS923_1", from_indicies(regions::compact::AS923_1)),
-        ("AS923_1B", from_indicies(regions::compact::AS923_1B)),
-        ("AS923_2", from_indicies(regions::compact::AS923_2)),
-        ("AS923_3", from_indicies(regions::compact::AS923_3)),
-        ("AS923_4", from_indicies(regions::compact::AS923_4)),
-        ("AU915", from_indicies(regions::compact::AU915)),
-        ("CN470", from_indicies(regions::compact::CN470)),
-        ("EU433", from_indicies(regions::compact::EU433)),
-        ("EU868", from_indicies(regions::compact::EU868)),
-        ("IN865", from_indicies(regions::compact::IN865)),
-        ("KR920", from_indicies(regions::compact::KR920)),
-        ("RU864", from_indicies(regions::compact::RU864)),
-        ("US915", from_indicies(regions::compact::US915)),
-    ];
-
-    // Do membership tests across the cartesian product off all regions
-    for (name_a, (tree_a, cells_a)) in regions.iter() {
-        for (name_b, (_tree_b, cells_b)) in regions.iter() {
-            if name_a == name_b {
-                assert_eq!(tree_a.len(), cells_a.len());
-                assert!(cells_a.iter().all(|cell| tree_a.contains(cell)));
-            } else {
-                assert!(!cells_b.iter().any(|cell| tree_a.contains(cell)));
-            }
-        }
-    }
 }
 
 #[test]
