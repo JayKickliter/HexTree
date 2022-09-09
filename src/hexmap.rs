@@ -1,7 +1,7 @@
 use crate::{
-    compactor::Compactor,
+    compaction::Compactor,
     digits::{base, Digits},
-    h3ron::{H3Cell},
+    h3ron::H3Cell,
     node::Node,
 };
 use std::{cmp::PartialEq, mem};

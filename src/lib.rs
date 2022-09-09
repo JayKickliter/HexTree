@@ -7,7 +7,7 @@
 //! todo!("document crate");
 //! ```
 
-pub mod compactor;
+pub mod compaction;
 mod digits;
 mod hexmap;
 mod hexset;

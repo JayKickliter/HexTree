@@ -1,4 +1,4 @@
-use crate::{compactor::Compactor, digits::Digits};
+use crate::{compaction::Compactor, digits::Digits};
 use std::mem;
 
 #[derive(Clone, PartialEq, Eq)]

@@ -48,7 +48,7 @@
 //! # }
 //! ```
 
-use crate::{compactor::SetCompactor, h3ron::H3Cell, HexMap};
+use crate::{compaction::SetCompactor, h3ron::H3Cell, HexMap};
 use std::iter::FromIterator;
 
 /// A HexSet is HexMap with no value.

@@ -1,8 +1,7 @@
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hexmap::{
-    compactor::EqCompactor,
-    compactor::SetCompactor,
+    compaction::{EqCompactor, SetCompactor},
     h3ron::{H3Cell, Index},
     HexMap, HexSet,
 };
