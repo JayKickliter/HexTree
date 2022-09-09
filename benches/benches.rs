@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
@@ -129,7 +129,7 @@ fn hexmap_construction(c: &mut Criterion) {
         b.iter(|| {
             (&precompacted_us915_cells)
                 .iter()
-                .zip(std::iter::repeat(&Region::US915))
+                .zip(std::iter::repeat(&black_box(Region::US915)))
                 .collect::<HexMap<Region>>()
         })
     });
@@ -138,7 +138,7 @@ fn hexmap_construction(c: &mut Criterion) {
         b.iter(|| {
             (&plain_us915_cells)
                 .iter()
-                .zip(std::iter::repeat(&Region::US915))
+                .zip(std::iter::repeat(&black_box(Region::US915)))
                 .zip(std::iter::repeat(&EqCompactor))
                 .map(|((h, v), c)| (h, v, c))
                 .collect::<HexMap<Region>>()
