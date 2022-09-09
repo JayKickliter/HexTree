@@ -1,7 +1,7 @@
 [package]
 name = "hexset"
 version = "0.1.0"
-authors = ["Jay Kickliter <jay@kickliter.com>"]
+authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
 edition = "2018"
 exclude = ["/test/*"]
@@ -35,7 +35,7 @@ geo-types = "*"
 git = "https://github.com/JayKickliter/h3-lorawan-regions.git"
 rev = "7eead0c263bfc4fc482b3e46e6d9f221f8253b82"
 default-features = false
-features = ["compact", "nocompact", "US915"]
+features = ["compact", "nocompact", "EU868", "US915"]
 
 [[bench]]
 name = "benches"
