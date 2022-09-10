@@ -49,7 +49,7 @@ impl<V> HexMap<V> {
 
     /// Adds a hexagon to the set.
     pub fn insert(&mut self, hex: H3Cell, value: V) {
-        let base_cell = base(&hex);
+        let base_cell = base(hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert(digits, value),
@@ -66,7 +66,7 @@ impl<V> HexMap<V> {
     where
         C: Compactor<V>,
     {
-        let base_cell = base(&hex);
+        let base_cell = base(hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert_and_compact(0, digits, value, &mut compactor),
@@ -90,7 +90,7 @@ impl<V> HexMap<V> {
     /// 3. The set contains a complete (leaf) parent of this target
     ///    hex due to 1 or 2.
     pub fn contains(&self, hex: &H3Cell) -> bool {
-        let base_cell = base(hex);
+        let base_cell = base(*hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(*hex);
@@ -102,7 +102,7 @@ impl<V> HexMap<V> {
 
     /// Returns a reference to the value corresponding to the given hex.
     pub fn get(&self, hex: &H3Cell) -> Option<&V> {
-        let base_cell = base(hex);
+        let base_cell = base(*hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(*hex);

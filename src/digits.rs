@@ -37,7 +37,7 @@ impl Iterator for Digits {
 
 /// Returns a cell's base.
 #[inline]
-pub(crate) fn base(cell: &H3Cell) -> u8 {
+pub(crate) fn base(cell: H3Cell) -> u8 {
     let index = cell.h3index();
     let base = (index >> 0x2D) & 0b111_1111;
     base as u8
