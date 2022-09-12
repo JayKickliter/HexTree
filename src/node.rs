@@ -22,32 +22,8 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn insert(&mut self, mut digits: Digits, value: V) {
-        match digits.next() {
-            None => *self = Self::Leaf(value),
-            Some(digit) => match self {
-                Self::Leaf(_) => (),
-                Self::Parent(children) => {
-                    match children[digit as usize].as_mut() {
-                        Some(node) => node.insert(digits, value),
-                        None => {
-                            let mut node = Node::new();
-                            node.insert(digits, value);
-                            children[digit as usize] = Some(Box::new(node));
-                        }
-                    };
-                }
-            },
-        };
-    }
-
-    pub(crate) fn insert_and_compact<C>(
-        &mut self,
-        res: u8,
-        mut digits: Digits,
-        value: V,
-        compactor: &mut C,
-    ) where
+    pub(crate) fn insert<C>(&mut self, res: u8, mut digits: Digits, value: V, compactor: &mut C)
+    where
         C: Compactor<V>,
     {
         match digits.next() {
@@ -56,10 +32,10 @@ impl<V> Node<V> {
                 Self::Leaf(_) => return,
                 Self::Parent(children) => {
                     match children[digit as usize].as_mut() {
-                        Some(node) => node.insert_and_compact(res + 1, digits, value, compactor),
+                        Some(node) => node.insert(res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new();
-                            node.insert_and_compact(res + 1, digits, value, compactor);
+                            node.insert(res + 1, digits, value, compactor);
                             children[digit as usize] = Some(Box::new(node));
                         }
                     };

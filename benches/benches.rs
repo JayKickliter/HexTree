@@ -3,7 +3,11 @@ use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
-use hextree::{compaction::EqCompactor, h3ron::H3Cell, HexMap, HexSet};
+use hextree::{
+    compaction::{EqCompactor, NullCompactor},
+    h3ron::H3Cell,
+    HexMap, HexSet,
+};
 use std::convert::TryFrom;
 
 fn hexset_lookup(c: &mut Criterion) {
@@ -72,11 +76,13 @@ fn hexmap_lookup(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("US915 HexMap lookup");
 
-    let us915_hexmap: HexMap<Region> = PLAIN_US915_INDICES
-        .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
-        .zip(std::iter::repeat(Region::US915))
-        .collect();
+    let mut us915_hexmap = HexMap::with_compactor(EqCompactor);
+    us915_hexmap.extend(
+        PLAIN_US915_INDICES
+            .iter()
+            .map(|&idx| H3Cell::try_from(idx).unwrap())
+            .zip(std::iter::repeat(Region::US915)),
+    );
 
     let tarpon_springs = coord! {x: -82.753822, y: 28.15215};
     let gulf_of_mexico = coord! {x: -83.101920, y: 28.128096};
@@ -130,18 +136,20 @@ fn hexmap_construction(c: &mut Criterion) {
             (&precompacted_us915_cells)
                 .iter()
                 .zip(std::iter::repeat(&black_box(Region::US915)))
-                .collect::<HexMap<Region>>()
+                .collect::<HexMap<Region, NullCompactor>>()
         })
     });
 
     group.bench_function("plain", |b| {
         b.iter(|| {
-            (&plain_us915_cells)
-                .iter()
-                .zip(std::iter::repeat(&black_box(Region::US915)))
-                .zip(std::iter::repeat(&EqCompactor))
-                .map(|((h, v), c)| (h, v, c))
-                .collect::<HexMap<Region>>()
+            let mut map = HexMap::with_compactor(EqCompactor);
+            map.extend(
+                (&plain_us915_cells)
+                    .iter()
+                    .zip(std::iter::repeat(&black_box(Region::US915)))
+                    .map(|(c, v)| (*c, *v)),
+            );
+            map
         })
     });
 }

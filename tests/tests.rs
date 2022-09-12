@@ -1,7 +1,7 @@
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use hextree::{
-    compaction::{EqCompactor, SetCompactor},
+    compaction::EqCompactor,
     h3ron::{H3Cell, Index},
     HexMap, HexSet,
 };
@@ -71,11 +71,11 @@ fn mono_hexmap() {
         (US915, regions::nocompact::US915),
     ];
 
-    let mut monomap = HexMap::new();
+    let mut monomap = HexMap::with_compactor(EqCompactor);
 
     for (name, cells) in regions.iter() {
         for cell in cells.iter() {
-            monomap.insert_and_compact(H3Cell::new(*cell), name, EqCompactor);
+            monomap.insert(H3Cell::new(*cell), name);
         }
     }
 
@@ -107,8 +107,8 @@ fn test_compaction() {
 
     assert!(!us915_tree.contains(&gulf_of_mexico));
     assert!(!us915_nocompact_tree.contains(&gulf_of_mexico));
-    us915_tree.insert_and_compact(gulf_of_mexico, (), SetCompactor);
-    us915_nocompact_tree.insert_and_compact(gulf_of_mexico, (), SetCompactor);
+    us915_tree.insert(gulf_of_mexico, ());
+    us915_nocompact_tree.insert(gulf_of_mexico, ());
     assert!(us915_tree.contains(&gulf_of_mexico));
     assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());

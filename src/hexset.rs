@@ -11,18 +11,18 @@
 //!
 //! # Usage
 //!
-//! <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1Ty1LhqAipSTl6lsXH7YAjE6kdNmEvCw&ehbc=2E312F" width="640" height="480"></iframe>
+//! <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1Ty1LhqAipSTl6lsXH7YAjE6kdNmEvCw&ehbc=2E312F" width="100%" height="480"></iframe>
 //!
 //! ----
 //!
 //! Let's create a HexSet for Monaco as visualized in the map
 //!
 //! ```
-//! # use hexmap::h3ron::Error;
+//! # use hextree::h3ron::Error;
 //! #
 //! # fn main() -> Result<(), Error> {
 //! use geo_types::coord;
-//! use hexmap::{h3ron::H3Cell, HexSet};
+//! use hextree::{h3ron::H3Cell, HexSet};
 //! #
 //! #    use byteorder::{LittleEndian as LE, ReadBytesExt};
 //! #    use hexmap::h3ron::FromH3Index;
@@ -52,16 +52,16 @@ use crate::{compaction::SetCompactor, h3ron::H3Cell, HexMap};
 use std::iter::FromIterator;
 
 /// A HexSet is HexMap with no value.
-pub type HexSet = HexMap<()>;
+pub type HexSet = HexMap<(), SetCompactor>;
 
 impl FromIterator<H3Cell> for HexSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = H3Cell>,
     {
-        let mut set = HexMap::new();
+        let mut set = HexMap::with_compactor(SetCompactor);
         for cell in iter {
-            set.insert_and_compact(cell, (), SetCompactor);
+            set.insert(cell, ());
         }
         set
     }
@@ -72,9 +72,9 @@ impl<'a> FromIterator<&'a H3Cell> for HexSet {
     where
         I: IntoIterator<Item = &'a H3Cell>,
     {
-        let mut set = HexMap::new();
+        let mut set = HexMap::with_compactor(SetCompactor);
         for cell in iter {
-            set.insert_and_compact(*cell, (), SetCompactor);
+            set.insert(*cell, ());
         }
         set
     }

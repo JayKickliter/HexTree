@@ -6,8 +6,26 @@ pub trait Compactor<V> {
     fn compact(&mut self, res: u8, children: [Option<&V>; 7]) -> Option<V>;
 }
 
+/// Does not perform any compaction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize)
+)]
+pub struct NullCompactor;
+
+impl<V> Compactor<V> for NullCompactor {
+    fn compact(&mut self, _res: u8, _children: [Option<&V>; 7]) -> Option<V> {
+        None
+    }
+}
+
 /// Compacts when all children are complete.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct SetCompactor;
 
 impl Compactor<()> for SetCompactor {
@@ -21,7 +39,11 @@ impl Compactor<()> for SetCompactor {
 }
 
 /// Compacts when all children are complete and have the same value.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct EqCompactor;
 
 impl<V: PartialEq + Clone> Compactor<V> for EqCompactor {
@@ -32,14 +54,5 @@ impl<V: PartialEq + Clone> Compactor<V> for EqCompactor {
             }
         };
         None
-    }
-}
-
-impl<V, F> Compactor<V> for F
-where
-    F: FnMut(u8, [Option<&V>; 7]) -> Option<V>,
-{
-    fn compact(&mut self, res: u8, children: [Option<&V>; 7]) -> Option<V> {
-        self(res, children)
     }
 }

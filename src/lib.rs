@@ -2,10 +2,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 //! TODO.
-//!
-//! ```
-//! todo!("document crate");
-//! ```
 
 pub mod compaction;
 mod digits;

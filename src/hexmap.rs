@@ -1,5 +1,5 @@
 use crate::{
-    compaction::Compactor,
+    compaction::{Compactor, NullCompactor},
     digits::{base, Digits},
     h3ron::H3Cell,
     node::Node,
@@ -13,12 +13,14 @@ use std::{cmp::PartialEq, iter::FromIterator};
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-pub struct HexMap<V> {
+pub struct HexMap<V, C> {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node<V>>]>,
+    /// User-provided compator. Defaults to the null compactor.
+    compactor: C,
 }
 
-impl<V> HexMap<V> {
+impl<V> HexMap<V, NullCompactor> {
     /// Constructs a new, empty `HexMap`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
@@ -29,9 +31,31 @@ impl<V> HexMap<V> {
                 .take(122)
                 .collect::<Vec<Option<Node<V>>>>()
                 .into_boxed_slice(),
+            compactor: NullCompactor,
         }
     }
+}
 
+impl<V, C> HexMap<V, C>
+where
+    C: Compactor<V>,
+{
+    /// Constructs a new, empty `HexMap`.
+    ///
+    /// Incurs a single heap allocation to store all 122 resolution-0
+    /// H3 cells.
+    pub fn with_compactor(compactor: C) -> Self {
+        Self {
+            nodes: std::iter::repeat_with(|| None)
+                .take(122)
+                .collect::<Vec<Option<Node<V>>>>()
+                .into_boxed_slice(),
+            compactor: compactor,
+        }
+    }
+}
+
+impl<V, C: Compactor<V>> HexMap<V, C> {
     /// Returns the number of H3 cells in the set.
     ///
     /// This method only considers complete, or leaf, hexagons in the
@@ -52,27 +76,10 @@ impl<V> HexMap<V> {
         let base_cell = base(hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(digits, value),
+            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
             None => {
                 let mut node = Node::new();
-                node.insert(digits, value);
-                self.nodes[base_cell as usize] = Some(node);
-            }
-        }
-    }
-
-    /// Adds a hexagon to the set and run provided compaction routine.
-    pub fn insert_and_compact<C>(&mut self, hex: H3Cell, value: V, mut compactor: C)
-    where
-        C: Compactor<V>,
-    {
-        let base_cell = base(hex);
-        let digits = Digits::new(hex);
-        match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert_and_compact(0, digits, value, &mut compactor),
-            None => {
-                let mut node = Node::new();
-                node.insert_and_compact(0, digits, value, &mut compactor);
+                node.insert(0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -113,13 +120,13 @@ impl<V> HexMap<V> {
     }
 }
 
-impl<V: PartialEq> Default for HexMap<V> {
+impl<V: PartialEq> Default for HexMap<V, NullCompactor> {
     fn default() -> Self {
         HexMap::new()
     }
 }
 
-impl<V> FromIterator<(H3Cell, V)> for HexMap<V> {
+impl<V> FromIterator<(H3Cell, V)> for HexMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (H3Cell, V)>,
@@ -132,7 +139,7 @@ impl<V> FromIterator<(H3Cell, V)> for HexMap<V> {
     }
 }
 
-impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V> {
+impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (&'a H3Cell, &'a V)>,
@@ -145,30 +152,18 @@ impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V> {
     }
 }
 
-impl<V, C: Compactor<V>> FromIterator<(H3Cell, V, C)> for HexMap<V> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = (H3Cell, V, C)>,
-    {
-        let mut map = HexMap::new();
-        for (cell, value, compactor) in iter {
-            map.insert_and_compact(cell, value, compactor);
+impl<V, C: Compactor<V>> Extend<(H3Cell, V)> for HexMap<V, C> {
+    fn extend<I: IntoIterator<Item = (H3Cell, V)>>(&mut self, iter: I) {
+        for (cell, val) in iter {
+            self.insert(cell, val)
         }
-        map
     }
 }
 
-impl<'a, V: Copy + 'a, C: Compactor<V> + Copy + 'a> FromIterator<(&'a H3Cell, &'a V, &'a C)>
-    for HexMap<V>
-{
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = (&'a H3Cell, &'a V, &'a C)>,
-    {
-        let mut map = HexMap::new();
-        for (cell, value, compactor) in iter {
-            map.insert_and_compact(*cell, *value, *compactor);
+impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a H3Cell, &'a V)> for HexMap<V, C> {
+    fn extend<I: IntoIterator<Item = (&'a H3Cell, &'a V)>>(&mut self, iter: I) {
+        for (cell, val) in iter {
+            self.insert(*cell, *val)
         }
-        map
     }
 }
