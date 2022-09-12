@@ -1,5 +1,4 @@
 use crate::{compaction::Compactor, digits::Digits};
-use std::mem;
 
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -12,18 +11,6 @@ pub(crate) enum Node<V> {
 }
 
 impl<V> Node<V> {
-    pub(crate) fn mem_size(&self) -> usize {
-        mem::size_of::<Self>()
-            + match self {
-                Self::Leaf(_) => 0,
-                Self::Parent(children) => children
-                    .iter()
-                    .flatten()
-                    .map(|n| n.mem_size())
-                    .sum::<usize>(),
-            }
-    }
-
     pub(crate) fn new() -> Self {
         Self::Parent([None, None, None, None, None, None, None])
     }

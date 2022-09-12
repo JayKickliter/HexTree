@@ -10,7 +10,7 @@
 pub mod compaction;
 mod digits;
 mod hexmap;
-mod hexset;
+pub mod hexset;
 mod node;
 
 pub use crate::hexmap::HexMap;

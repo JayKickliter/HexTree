@@ -1,4 +1,4 @@
-//! A HexMap is a structure for representing geographical regions and
+//! A HexSex is a structure for representing geographical regions and
 //! efficiently testing performing hit-tests on that region. Or, in
 //! other words: I have a region defined; does it contain this
 //! point on earth?
@@ -15,7 +15,7 @@
 //!
 //! ----
 //!
-//! Let's create a HexMap for Monaco as visualized in the map
+//! Let's create a HexSet for Monaco as visualized in the map
 //!
 //! ```
 //! # use hexmap::h3ron::Error;

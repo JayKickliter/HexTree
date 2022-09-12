@@ -4,7 +4,7 @@ use crate::{
     h3ron::H3Cell,
     node::Node,
 };
-use std::{cmp::PartialEq, iter::FromIterator, mem};
+use std::{cmp::PartialEq, iter::FromIterator};
 
 /// An efficient way to represent any portion(s) of Earth as a set of
 /// `H3` hexagons.
@@ -110,20 +110,6 @@ impl<V> HexMap<V> {
             }
             None => None,
         }
-    }
-
-    /// Returns the current memory use of this set.
-    ///
-    /// Note: The actual total may be higher than reported due to
-    ///       memory alignment.
-    pub fn mem_size(&self) -> usize {
-        mem::size_of::<Self>()
-            + self
-                .nodes
-                .iter()
-                .flatten()
-                .map(|n| n.mem_size())
-                .sum::<usize>()
     }
 }
 
