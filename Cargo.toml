@@ -1,5 +1,5 @@
 [package]
-name = "hexmap"
+name = "hextree"
 version = "0.1.0"
 authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
@@ -10,7 +10,7 @@ keywords = ["geo", "geography", "geospatial", "gis", "h3"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jaykickliter/hexmap"
 description = """
-Structures for mapping geographic areas to values.
+Location to value mapping.
 """
 
 [package.metadata.docs.rs]
