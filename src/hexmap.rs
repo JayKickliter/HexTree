@@ -6,8 +6,58 @@ use crate::{
 };
 use std::{cmp::PartialEq, iter::FromIterator};
 
-/// An efficient way to represent any portion(s) of Earth as a set of
-/// `H3` hexagons.
+/// A HexMap is a structure for mapping geographical regions to values.
+///
+///
+/// [serde]: https://docs.rs/serde/latest/serde/
+///
+/// # Usage
+///
+/// <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1Ty1LhqAipSTl6lsXH7YAjE6kdNmEvCw&ehbc=2E312F" width="100%" height="480"></iframe>
+///
+/// ----
+///
+/// Let's create a HexMap for Monaco as visualized in the map
+///
+/// ```
+/// # use hextree::h3ron::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// use geo_types::coord;
+/// use hextree::{h3ron::H3Cell, compaction::EqCompactor, HexMap};
+/// #
+/// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
+/// #    use hextree::h3ron::{Index, FromH3Index};
+/// #    let idx_bytes = include_bytes!("../assets//monaco.res12.h3idx");
+/// #    let rdr = &mut idx_bytes.as_slice();
+/// #    let mut cells = Vec::new();
+/// #    while let Ok(idx) = rdr.read_u64::<LE>() {
+/// #        cells.push(H3Cell::from_h3index(idx));
+/// #    }
+///
+/// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// enum Region {
+///     Monaco,
+/// }
+///
+/// // Construct map with a compactor that automatically combines
+/// // cells with the same save value.
+/// let mut monaco = HexMap::with_compactor(EqCompactor);
+///
+/// // Now extend the map with cells and a region value.
+/// monaco.extend(cells.iter().copied().zip(std::iter::repeat(Region::Monaco)));
+///
+/// // You can see in the map above that our set covers Point 1 (green
+/// // check) but not Point 2 (red x), let's test that.
+/// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
+/// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
+///
+/// assert_eq!(monaco.get(&point_1), Some(&Region::Monaco));
+/// assert_eq!(monaco.get(&point_2), None);
+///
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde-support",
@@ -21,7 +71,7 @@ pub struct HexMap<V, C> {
 }
 
 impl<V> HexMap<V, NullCompactor> {
-    /// Constructs a new, empty `HexMap`.
+    /// Constructs a new, empty `HexMap` with the no-op `NullCompactor`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -40,7 +90,7 @@ impl<V, C> HexMap<V, C>
 where
     C: Compactor<V>,
 {
-    /// Constructs a new, empty `HexMap`.
+    /// Constructs a new, empty `HexMap` with the provided compactor.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -71,7 +121,7 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
         self.len() == 0
     }
 
-    /// Adds a hexagon to the set.
+    /// Adds a hexagon/value pair to the set.
     pub fn insert(&mut self, hex: H3Cell, value: V) {
         let base_cell = base(hex);
         let digits = Digits::new(hex);
