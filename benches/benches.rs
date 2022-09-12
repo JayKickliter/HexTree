@@ -3,11 +3,7 @@ use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
-use hextree::{
-    compaction::{EqCompactor, NullCompactor},
-    h3ron::H3Cell,
-    HexMap, HexSet,
-};
+use hextree::{compaction::EqCompactor, h3ron::H3Cell, HexMap, HexSet};
 use std::convert::TryFrom;
 
 fn hexset_lookup(c: &mut Criterion) {
@@ -58,11 +54,11 @@ fn hexset_construction(c: &mut Criterion) {
         .collect();
 
     group.bench_function("pre-compacted", |b| {
-        b.iter(|| (&precompacted_us915_cells).iter().collect::<HexSet>())
+        b.iter(|| precompacted_us915_cells.iter().collect::<HexSet>())
     });
 
     group.bench_function("plain", |b| {
-        b.iter(|| (&plain_us915_cells).iter().collect::<HexSet>())
+        b.iter(|| plain_us915_cells.iter().collect::<HexSet>())
     });
 }
 
@@ -133,10 +129,14 @@ fn hexmap_construction(c: &mut Criterion) {
 
     group.bench_function("pre-compacted", |b| {
         b.iter(|| {
-            (&precompacted_us915_cells)
-                .iter()
-                .zip(std::iter::repeat(&black_box(Region::US915)))
-                .collect::<HexMap<Region, NullCompactor>>()
+            let mut map = HexMap::with_compactor(EqCompactor);
+            map.extend(
+                precompacted_us915_cells
+                    .iter()
+                    .zip(std::iter::repeat(&black_box(Region::US915)))
+                    .map(|(c, v)| (*c, *v)),
+            );
+            map
         })
     });
 
@@ -144,7 +144,7 @@ fn hexmap_construction(c: &mut Criterion) {
         b.iter(|| {
             let mut map = HexMap::with_compactor(EqCompactor);
             map.extend(
-                (&plain_us915_cells)
+                plain_us915_cells
                     .iter()
                     .zip(std::iter::repeat(&black_box(Region::US915)))
                     .map(|(c, v)| (*c, *v)),
@@ -157,8 +157,8 @@ fn hexmap_construction(c: &mut Criterion) {
 criterion_group!(
     benches,
     hexset_lookup,
-    hexset_construction,
     hexmap_lookup,
-    hexmap_construction
+    hexset_construction,
+    hexmap_construction,
 );
 criterion_main!(benches);

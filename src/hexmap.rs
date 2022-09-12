@@ -50,7 +50,7 @@ where
                 .take(122)
                 .collect::<Vec<Option<Node<V>>>>()
                 .into_boxed_slice(),
-            compactor: compactor,
+            compactor,
         }
     }
 }
