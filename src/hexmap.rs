@@ -103,6 +103,18 @@ where
             compactor,
         }
     }
+
+    /// Replace the current compactor with the new one, consuming `self`.
+    ///
+    /// This method is useful if you want to use one compaction
+    /// strategy for creating an initial, then another one for updates
+    /// later.
+    pub fn replace_compactor<NewC>(self, new_compactor: NewC) -> HexMap<V, NewC> {
+        HexMap {
+            nodes: self.nodes,
+            compactor: new_compactor,
+        }
+    }
 }
 
 impl<V, C: Compactor<V>> HexMap<V, C> {
