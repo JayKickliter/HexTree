@@ -22,7 +22,8 @@
 //! hexagons into their parent hex. For every large regions, the
 //! compaction process _can_ continue to lowest resolution cells
 //! (res-0), possibly removing millions of redundant cells from the
-//! tree.
+//! tree. For example, a set of 4,795,661 res-7 cells representing
+//! North America coalesces [into a 42,383 element `HexSet`][us915].
 //!
 //! A hextree's internal structure exactly matches the semantics of an
 //! [H3 cell]. The root of the tree has 122 resolution-0 nodes,
@@ -39,6 +40,7 @@
 //! [H3 cell]: https://h3geo.org/docs/core-library/h3Indexing
 //! [serde]: https://docs.rs/serde/latest/serde
 //! [compaction]: crate::compaction
+//! [us915]: https://www.google.com/maps/d/u/0/edit?mid=15wRzxmtmyzqf6fHU3yuW4hJAM9MoxLJs
 
 pub mod compaction;
 mod digits;
