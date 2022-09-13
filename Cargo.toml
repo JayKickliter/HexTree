@@ -28,6 +28,7 @@ serde = { version = "1", optional = true, features = ["derive"] }
 byteorder = "*"
 criterion = { version = "0.3", features = ["html_reports"] }
 geo-types = "*"
+iai = "0.1"
 
 [dev-dependencies.h3-lorawan-regions]
 git = "https://github.com/JayKickliter/h3-lorawan-regions.git"
@@ -36,5 +37,9 @@ default-features = false
 features = ["compact", "nocompact", "EU868", "US915"]
 
 [[bench]]
-name = "benches"
+name = "time"
+harness = false
+
+[[bench]]
+name = "cycles"
 harness = false
