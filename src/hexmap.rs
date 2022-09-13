@@ -52,8 +52,8 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert_eq!(monaco.get(&point_1), Some(&Region::Monaco));
-/// assert_eq!(monaco.get(&point_2), None);
+/// assert_eq!(monaco.get(point_1), Some(&Region::Monaco));
+/// assert_eq!(monaco.get(point_2), None);
 ///
 /// #     Ok(())
 /// # }
@@ -153,11 +153,11 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
     ///    precisely this target hex.
     /// 3. The set contains a complete (leaf) parent of this target
     ///    hex due to 1 or 2.
-    pub fn contains(&self, hex: &H3Cell) -> bool {
-        let base_cell = base(*hex);
+    pub fn contains(&self, hex: H3Cell) -> bool {
+        let base_cell = base(hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(*hex);
+                let digits = Digits::new(hex);
                 node.contains(digits)
             }
             None => false,
@@ -166,11 +166,11 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get(&self, hex: &H3Cell) -> Option<&V> {
-        let base_cell = base(*hex);
+    pub fn get(&self, hex: H3Cell) -> Option<&V> {
+        let base_cell = base(hex);
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(*hex);
+                let digits = Digits::new(hex);
                 node.get(digits)
             }
             None => None,

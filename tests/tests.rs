@@ -45,16 +45,16 @@ fn all_up() {
     let gulf_of_mexico = H3Cell::from_coordinate(coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
     let paris = H3Cell::from_coordinate(coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
 
-    assert!(us915_tree.contains(&tarpon_springs));
+    assert!(us915_tree.contains(tarpon_springs));
     assert!(naive_contains(&us915_cells, tarpon_springs));
 
-    assert!(!us915_tree.contains(&gulf_of_mexico));
+    assert!(!us915_tree.contains(gulf_of_mexico));
     assert!(!naive_contains(&us915_cells, gulf_of_mexico));
 
-    assert!(!us915_tree.contains(&paris));
+    assert!(!us915_tree.contains(paris));
     assert!(!naive_contains(&us915_cells, paris));
 
-    assert!(us915_cells.iter().all(|cell| us915_tree.contains(cell)));
+    assert!(us915_cells.iter().all(|&cell| us915_tree.contains(cell)));
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn mono_hexmap() {
     for (name, cells) in regions.iter() {
         assert!(cells
             .iter()
-            .all(|c| monomap.get(&H3Cell::new(*c)) == Some(&name)));
+            .all(|c| monomap.get(H3Cell::new(*c)) == Some(&name)));
     }
 }
 
@@ -97,19 +97,19 @@ fn test_compaction() {
     assert!(us915_nocompact_tree.len() < us915_nocompact_cells.len());
     assert!(us915_nocompact_cells
         .iter()
-        .all(|&c| us915_nocompact_tree.contains(&c)));
+        .all(|&c| us915_nocompact_tree.contains(c)));
     assert!(us915_cells
         .iter()
-        .all(|&c| us915_nocompact_tree.contains(&c)));
+        .all(|&c| us915_nocompact_tree.contains(c)));
     assert!(us915_nocompact_cells
         .iter()
-        .all(|&c| us915_tree.contains(&c)));
+        .all(|&c| us915_tree.contains(c)));
 
-    assert!(!us915_tree.contains(&gulf_of_mexico));
-    assert!(!us915_nocompact_tree.contains(&gulf_of_mexico));
+    assert!(!us915_tree.contains(gulf_of_mexico));
+    assert!(!us915_nocompact_tree.contains(gulf_of_mexico));
     us915_tree.insert(gulf_of_mexico, ());
     us915_nocompact_tree.insert(gulf_of_mexico, ());
-    assert!(us915_tree.contains(&gulf_of_mexico));
-    assert!(us915_nocompact_tree.contains(&gulf_of_mexico));
+    assert!(us915_tree.contains(gulf_of_mexico));
+    assert!(us915_nocompact_tree.contains(gulf_of_mexico));
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
 }

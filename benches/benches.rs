@@ -26,17 +26,17 @@ fn hexset_lookup(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("Tarpon Spring", resolution),
             &tarpon_springs,
-            |b, &cell| b.iter(|| us915_hexset.contains(&cell)),
+            |b, &cell| b.iter(|| us915_hexset.contains(cell)),
         );
 
         group.bench_with_input(
             BenchmarkId::new("Gulf of Mexico", resolution),
             &gulf_of_mexico,
-            |b, &cell| b.iter(|| us915_hexset.contains(&cell)),
+            |b, &cell| b.iter(|| us915_hexset.contains(cell)),
         );
 
         group.bench_with_input(BenchmarkId::new("Paris", resolution), &paris, |b, &cell| {
-            b.iter(|| us915_hexset.contains(&cell))
+            b.iter(|| us915_hexset.contains(cell))
         });
     }
 }
@@ -92,17 +92,17 @@ fn hexmap_lookup(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("Tarpon Spring", resolution),
             &tarpon_springs,
-            |b, &cell| b.iter(|| us915_hexmap.get(&cell)),
+            |b, &cell| b.iter(|| us915_hexmap.get(cell)),
         );
 
         group.bench_with_input(
             BenchmarkId::new("Gulf of Mexico", resolution),
             &gulf_of_mexico,
-            |b, &cell| b.iter(|| us915_hexmap.get(&cell)),
+            |b, &cell| b.iter(|| us915_hexmap.get(cell)),
         );
 
         group.bench_with_input(BenchmarkId::new("Paris", resolution), &paris, |b, &cell| {
-            b.iter(|| us915_hexmap.get(&cell))
+            b.iter(|| us915_hexmap.get(cell))
         });
     }
 }
