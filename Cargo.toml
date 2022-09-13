@@ -1,17 +1,16 @@
 [package]
-name = "hexset"
+name = "hextree"
 version = "0.1.0"
-authors = ["Jay Kickliter <jay@kickliter.com>"]
+authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
 edition = "2018"
 exclude = ["/test/*"]
 readme = "README.md"
 keywords = ["geo", "geography", "geospatial", "gis", "h3"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/jaykickliter/hexset"
+repository = "https://github.com/jaykickliter/hexmap"
 description = """
-A HexSet is datastructure for hit-testing geographic regions.
-Regions are internally represented as a tree of H3 polygons.
+Location to value mapping.
 """
 
 [package.metadata.docs.rs]
@@ -34,7 +33,7 @@ geo-types = "*"
 git = "https://github.com/JayKickliter/h3-lorawan-regions.git"
 rev = "7eead0c263bfc4fc482b3e46e6d9f221f8253b82"
 default-features = false
-features = ["compact", "nocompact", "US915"]
+features = ["compact", "nocompact", "EU868", "US915"]
 
 [[bench]]
 name = "benches"
