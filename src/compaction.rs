@@ -1,8 +1,15 @@
-//! User definable compaction.
+//! User pluggable compaction.
 
 /// A user provided compactor.
+///
+/// The compactor trait allows you customize compaction behavior after
+/// calling `insert` on a tree.
 pub trait Compactor<V> {
-    /// Compact the thing.
+    /// Called after every insert into a non-leaf node.
+    ///
+    /// Given an intermediate (not-leaf) cell's resolution and up to 7
+    /// children, you can choose to leave the node alone by returning
+    /// `None`, or turn it into a leaf-node by return `Some(value)`.
     fn compact(&mut self, res: u8, children: [Option<&V>; 7]) -> Option<V>;
 }
 

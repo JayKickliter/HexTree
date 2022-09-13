@@ -86,11 +86,8 @@ impl<V> HexMap<V, NullCompactor> {
     }
 }
 
-impl<V, C> HexMap<V, C>
-where
-    C: Compactor<V>,
-{
-    /// Constructs a new, empty `HexMap` with the provided compactor.
+impl<V, C: Compactor<V>> HexMap<V, C> {
+    /// Constructs a new, empty `HexMap` with the provided [compactor][crate::compaction].
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -115,9 +112,7 @@ where
             compactor: new_compactor,
         }
     }
-}
 
-impl<V, C: Compactor<V>> HexMap<V, C> {
     /// Returns the number of H3 cells in the set.
     ///
     /// This method only considers complete, or leaf, hexagons in the
@@ -169,7 +164,8 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
         }
     }
 
-    /// Returns a reference to the value corresponding to the given hex.
+    /// Returns a reference to the value corresponding to the given
+    /// hex or one of its parents.
     pub fn get(&self, hex: &H3Cell) -> Option<&V> {
         let base_cell = base(*hex);
         match self.nodes[base_cell as usize].as_ref() {

@@ -4,8 +4,8 @@
 //! hextree provides tree structures that represent geographic regions with H3 cells.
 //!
 //! The primary structures are:
-//! - HexMap: an H3Cell-to-value map.
-//! - HexSet: an H3Cell set for hit-testing.
+//! - [`HexMap`][crate::HexMap]: an H3Cell-to-value map.
+//! - [`HexSet`][crate::HexSet]: an H3Cell set for hit-testing.
 //!
 //! You can think of `HexMap` vs. `HexSet` as [`HashMap`] vs. [`HashSet`].
 //!
