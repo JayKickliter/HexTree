@@ -109,4 +109,23 @@ impl<V> Node<V> {
             (None, Self::Parent(_)) => None,
         }
     }
+
+    pub(crate) fn get_mut(&mut self, mut digits: Digits) -> Option<&mut V> {
+        if let Self::Leaf(val) = self {
+            return Some(val);
+        }
+        match (digits.next(), self) {
+            (_, Self::Leaf(_)) => unreachable!(),
+            (Some(digit), Self::Parent(children)) => {
+                // TODO check if this node is "full"
+                match &mut children.as_mut_slice()[digit as usize] {
+                    Some(node) => node.get_mut(digits),
+                    None => None,
+                }
+            }
+            // No digits left, but `self` isn't full, so this hex
+            // can't fully contain the target.
+            (None, Self::Parent(_)) => None,
+        }
+    }
 }

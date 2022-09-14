@@ -176,6 +176,19 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
             None => None,
         }
     }
+
+    /// Returns a reference to the value corresponding to the given
+    /// hex or one of its parents.
+    pub fn get_mut(&mut self, hex: H3Cell) -> Option<&mut V> {
+        let base_cell = base(hex);
+        match self.nodes[base_cell as usize].as_mut() {
+            Some(node) => {
+                let digits = Digits::new(hex);
+                node.get_mut(digits)
+            }
+            None => None,
+        }
+    }
 }
 
 impl<V: PartialEq> Default for HexMap<V, NullCompactor> {
