@@ -1,3 +1,6 @@
+//! A HexMap is a structure for mapping geographical regions to values.
+
+pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use crate::{
     compaction::{Compactor, NullCompactor},
     digits::{base, Digits},
@@ -63,7 +66,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-pub struct HexMap<V, C> {
+pub struct HexMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node<V>>]>,
     /// User-provided compator. Defaults to the null compactor.
@@ -87,6 +90,22 @@ impl<V> HexMap<V, NullCompactor> {
 }
 
 impl<V, C: Compactor<V>> HexMap<V, C> {
+    /// Adds a hexagon/value pair to the set.
+    pub fn insert(&mut self, hex: H3Cell, value: V) {
+        let base_cell = base(hex);
+        let digits = Digits::new(hex);
+        match self.nodes[base_cell as usize].as_mut() {
+            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
+            None => {
+                let mut node = Node::new();
+                node.insert(0_u8, digits, value, &mut self.compactor);
+                self.nodes[base_cell as usize] = Some(node);
+            }
+        }
+    }
+}
+
+impl<V, C> HexMap<V, C> {
     /// Constructs a new, empty `HexMap` with the provided [compactor][crate::compaction].
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
@@ -126,20 +145,6 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
     /// Returns `true` if the set contains no cells.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-
-    /// Adds a hexagon/value pair to the set.
-    pub fn insert(&mut self, hex: H3Cell, value: V) {
-        let base_cell = base(hex);
-        let digits = Digits::new(hex);
-        match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
-            None => {
-                let mut node = Node::new();
-                node.insert(0_u8, digits, value, &mut self.compactor);
-                self.nodes[base_cell as usize] = Some(node);
-            }
-        }
     }
 
     /// Returns `true` if the set fully contains `hex`.
@@ -189,6 +194,17 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
             None => None,
         }
     }
+
+    /// Gets the entry in the map for the corresponding cell.
+    pub fn entry(&'_ mut self, hex: H3Cell) -> Entry<'_, V, C> {
+        if self.get(hex).is_none() {
+            return Entry::Vacant(VacantEntry { hex, map: self });
+        }
+        Entry::Occupied(OccupiedEntry {
+            hex,
+            value: self.get_mut(hex).unwrap(),
+        })
+    }
 }
 
 impl<V: PartialEq> Default for HexMap<V, NullCompactor> {
@@ -236,5 +252,111 @@ impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a H3Cell, &'a V)> for HexMap<V
         for (cell, val) in iter {
             self.insert(*cell, *val)
         }
+    }
+}
+
+impl<V, C> std::ops::Index<H3Cell> for HexMap<V, C> {
+    type Output = V;
+
+    /// Returns a reference to the value corresponding to the supplied
+    /// key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    ///
+    /// let mut map = HexMap::new();
+    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    ///
+    /// map.insert(eiffel_tower_res12, "France");
+    /// assert_eq!(map[eiffel_tower_res12], "France");
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the cell is not present in the `HexMap`.
+    fn index(&self, cell: H3Cell) -> &V {
+        self.get(cell).expect("no entry found for cell")
+    }
+}
+
+impl<V, C> std::ops::Index<&H3Cell> for HexMap<V, C> {
+    type Output = V;
+
+    /// Returns a reference to the value corresponding to the supplied
+    /// key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    ///
+    /// let mut map = HexMap::new();
+    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    ///
+    /// map.insert(eiffel_tower_res12, "France");
+    /// assert_eq!(map[&eiffel_tower_res12], "France");
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the cell is not present in the `HexMap`.
+    fn index(&self, cell: &H3Cell) -> &V {
+        self.get(*cell).expect("no entry found for cell")
+    }
+}
+
+impl<V, C> std::ops::IndexMut<H3Cell> for HexMap<V, C> {
+    /// Returns a reference to the value corresponding to the supplied
+    /// key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    ///
+    /// let mut map = HexMap::new();
+    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    ///
+    /// map.insert(eiffel_tower_res12, "France");
+    /// assert_eq!(map[eiffel_tower_res12], "France");
+    ///
+    /// map[eiffel_tower_res12] = "Paris";
+    /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the cell is not present in the `HexMap`.
+    fn index_mut(&mut self, cell: H3Cell) -> &mut V {
+        self.get_mut(cell).expect("no entry found for cell")
+    }
+}
+
+impl<V, C> std::ops::IndexMut<&H3Cell> for HexMap<V, C> {
+    /// Returns a reference to the value corresponding to the supplied
+    /// key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    ///
+    /// let mut map = HexMap::new();
+    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    ///
+    /// map.insert(eiffel_tower_res12, "France");
+    /// assert_eq!(map[&eiffel_tower_res12], "France");
+    ///
+    /// map[&eiffel_tower_res12] = "Paris";
+    /// assert_eq!(map[&eiffel_tower_res12], "Paris");
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the cell is not present in the `HexMap`.
+    fn index_mut(&mut self, cell: &H3Cell) -> &mut V {
+        self.get_mut(*cell).expect("no entry found for cell")
     }
 }

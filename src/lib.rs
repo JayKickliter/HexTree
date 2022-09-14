@@ -1,5 +1,4 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(unsafe_code, missing_docs, rustdoc::broken_intra_doc_links)]
 
 //! hextree provides tree structures that represent geographic regions with H3 cells.
 //!
@@ -44,7 +43,8 @@
 
 pub mod compaction;
 mod digits;
-mod hexmap;
+mod entry;
+pub mod hexmap;
 mod hexset;
 mod node;
 

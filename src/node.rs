@@ -97,13 +97,10 @@ impl<V> Node<V> {
 
         match (digits.next(), self) {
             (_, Self::Leaf(_)) => unreachable!(),
-            (Some(digit), Self::Parent(children)) => {
-                // TODO check if this node is "full"
-                match &children.as_slice()[digit as usize] {
-                    Some(node) => node.get(digits),
-                    None => None,
-                }
-            }
+            (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
+                Some(node) => node.get(digits),
+                None => None,
+            },
             // No digits left, but `self` isn't full, so this hex
             // can't fully contain the target.
             (None, Self::Parent(_)) => None,
@@ -117,7 +114,6 @@ impl<V> Node<V> {
         match (digits.next(), self) {
             (_, Self::Leaf(_)) => unreachable!(),
             (Some(digit), Self::Parent(children)) => {
-                // TODO check if this node is "full"
                 match &mut children.as_mut_slice()[digit as usize] {
                     Some(node) => node.get_mut(digits),
                     None => None,
