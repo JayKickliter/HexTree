@@ -6,7 +6,6 @@ use hextree::{
     HexMap, HexSet,
 };
 use std::convert::TryFrom;
-
 /// Perform a linear search of `region` for `target` cell.
 fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
     let promotions = (0..16)
