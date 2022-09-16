@@ -1,12 +1,12 @@
-//! `HexMap`'s Entry API.
+//! `HexTreeMap`'s Entry API.
 
-use crate::{compaction::Compactor, h3ron::H3Cell, HexMap};
+use crate::{compaction::Compactor, h3ron::H3Cell, HexTreeMap};
 
 /// A view into a single entry in a map, which may either be vacant or
 /// occupied.
 ///
-/// This enum is constructed from the [entry][HexMap::entry] method on
-/// [HexMap][HexMap].
+/// This enum is constructed from the [entry][HexTreeMap::entry]
+/// method on [HexTreeMap][HexTreeMap].
 pub enum Entry<'a, V, C> {
     /// An occupied entry.
     Occupied(OccupiedEntry<'a, V>),
@@ -14,18 +14,18 @@ pub enum Entry<'a, V, C> {
     Vacant(VacantEntry<'a, V, C>),
 }
 
-/// A view into an occupied entry in a `HexMap`. It is part of the
+/// A view into an occupied entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct OccupiedEntry<'a, V> {
     pub(crate) hex: H3Cell,
     pub(crate) value: &'a mut V,
 }
 
-/// A view into a vacant entry in a `HexMap`. It is part of the
+/// A view into a vacant entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct VacantEntry<'a, V, C> {
     pub(crate) hex: H3Cell,
-    pub(crate) map: &'a mut HexMap<V, C>,
+    pub(crate) map: &'a mut HexTreeMap<V, C>,
 }
 
 impl<'a, V, C> Entry<'a, V, C>
@@ -38,9 +38,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.entry(eiffel_tower_res12)
@@ -73,9 +73,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.entry(eiffel_tower_res12)
@@ -100,9 +100,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.entry(eiffel_tower_res12)
@@ -136,9 +136,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map: HexMap<Option<&str>> = HexMap::new();
+    /// let mut map: HexTreeMap<Option<&str>> = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.entry(eiffel_tower_res12).or_default();

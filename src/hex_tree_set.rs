@@ -1,9 +1,9 @@
-use crate::{compaction::SetCompactor, h3ron::H3Cell, HexMap};
+use crate::{compaction::SetCompactor, h3ron::H3Cell, HexTreeMap};
 use std::iter::FromIterator;
 
-/// A HexSex is a structure for representing geographical regions and
-/// efficiently testing performing hit-tests on that region. Or, in
-/// other words: I have a region defined; does it contain this
+/// A HexTreeSet is a structure for representing geographical regions
+/// and efficiently testing performing hit-tests on that region. Or,
+/// in other words: I have a region defined; does it contain this
 /// point on earth?
 ///
 ///
@@ -13,14 +13,14 @@ use std::iter::FromIterator;
 ///
 /// ----
 ///
-/// Let's create a HexSet for Monaco as visualized in the map
+/// Let's create a HexTreeSet for Monaco as visualized in the map
 ///
 /// ```
 /// # use hextree::h3ron::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// use geo_types::coord;
-/// use hextree::{h3ron::H3Cell, HexSet};
+/// use hextree::{h3ron::H3Cell, HexTreeSet};
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
 /// #    use hextree::h3ron::FromH3Index;
@@ -32,7 +32,7 @@ use std::iter::FromIterator;
 /// #    }
 ///
 /// // `cells` is a slice of `H3Cell`s
-/// let monaco: HexSet = cells.iter().collect();
+/// let monaco: HexTreeSet = cells.iter().collect();
 ///
 /// // You can see in the map above that our set covers Point 1 (green
 /// // check) but not Point 2 (red x), let's test that.
@@ -45,14 +45,14 @@ use std::iter::FromIterator;
 /// #     Ok(())
 /// # }
 /// ```
-pub type HexSet = HexMap<(), SetCompactor>;
+pub type HexTreeSet = HexTreeMap<(), SetCompactor>;
 
-impl FromIterator<H3Cell> for HexSet {
+impl FromIterator<H3Cell> for HexTreeSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = H3Cell>,
     {
-        let mut set = HexMap::with_compactor(SetCompactor);
+        let mut set = HexTreeMap::with_compactor(SetCompactor);
         for cell in iter {
             set.insert(cell, ());
         }
@@ -60,12 +60,12 @@ impl FromIterator<H3Cell> for HexSet {
     }
 }
 
-impl<'a> FromIterator<&'a H3Cell> for HexSet {
+impl<'a> FromIterator<&'a H3Cell> for HexTreeSet {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = &'a H3Cell>,
     {
-        let mut set = HexMap::with_compactor(SetCompactor);
+        let mut set = HexTreeMap::with_compactor(SetCompactor);
         for cell in iter {
             set.insert(*cell, ());
         }
