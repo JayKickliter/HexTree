@@ -4,11 +4,12 @@ version = "0.1.0"
 authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
 edition = "2018"
-exclude = ["/test/*"]
+exclude = [".github/*", "/assets/*", "/test/*"]
 readme = "README.md"
 keywords = ["geo", "geography", "geospatial", "gis", "h3"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/jaykickliter/hexmap"
+homepage = "https://github.com/jaykickliter/HexTree"
+repository = "https://github.com/jaykickliter/HexTree"
 description = """
 Location to value mapping.
 """
@@ -25,9 +26,9 @@ h3ron = { version = "0.15" }
 serde = { version = "1", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-byteorder = "*"
+byteorder = "1"
 criterion = { version = "0.3", features = ["html_reports"] }
-geo-types = "*"
+geo-types = "0.7"
 
 [dev-dependencies.h3-lorawan-regions]
 git = "https://github.com/JayKickliter/h3-lorawan-regions.git"

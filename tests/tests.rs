@@ -3,7 +3,7 @@ use h3_lorawan_regions as regions;
 use hextree::{
     compaction::EqCompactor,
     h3ron::{H3Cell, Index},
-    HexMap, HexSet,
+    HexTreeMap, HexTreeSet,
 };
 use std::convert::TryFrom;
 /// Perform a linear search of `region` for `target` cell.
@@ -26,12 +26,12 @@ fn naive_contains(region: &[H3Cell], target: H3Cell) -> bool {
     false
 }
 
-fn from_indicies(indicies: &[u64]) -> (HexSet, Vec<H3Cell>) {
+fn from_indicies(indicies: &[u64]) -> (HexTreeSet, Vec<H3Cell>) {
     let cells: Vec<H3Cell> = indicies
         .iter()
         .map(|&idx| H3Cell::try_from(idx).unwrap())
         .collect();
-    let set: HexSet = cells.iter().collect();
+    let set: HexTreeSet = cells.iter().collect();
     (set, cells)
 }
 
@@ -57,7 +57,7 @@ fn all_up() {
 }
 
 #[test]
-fn mono_hexmap() {
+fn mono_map() {
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Region {
         EU868,
@@ -70,7 +70,7 @@ fn mono_hexmap() {
         (US915, regions::nocompact::US915),
     ];
 
-    let mut monomap = HexMap::with_compactor(EqCompactor);
+    let mut monomap = HexTreeMap::with_compactor(EqCompactor);
 
     for (name, cells) in regions.iter() {
         for cell in cells.iter() {

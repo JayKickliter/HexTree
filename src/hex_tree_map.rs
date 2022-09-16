@@ -1,4 +1,4 @@
-//! A HexMap is a structure for mapping geographical regions to values.
+//! A HexTreeMap is a structure for mapping geographical regions to values.
 
 pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use crate::{
@@ -9,7 +9,8 @@ use crate::{
 };
 use std::{cmp::PartialEq, iter::FromIterator};
 
-/// A HexMap is a structure for mapping geographical regions to values.
+/// A HexTreeMap is a structure for mapping geographical regions to
+/// values.
 ///
 ///
 /// [serde]: https://docs.rs/serde/latest/serde/
@@ -20,14 +21,14 @@ use std::{cmp::PartialEq, iter::FromIterator};
 ///
 /// ----
 ///
-/// Let's create a HexMap for Monaco as visualized in the map
+/// Let's create a HexTreeMap for Monaco as visualized in the map
 ///
 /// ```
 /// # use hextree::h3ron::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// use geo_types::coord;
-/// use hextree::{h3ron::H3Cell, compaction::EqCompactor, HexMap};
+/// use hextree::{h3ron::H3Cell, compaction::EqCompactor, HexTreeMap};
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
 /// #    use hextree::h3ron::{Index, FromH3Index};
@@ -45,7 +46,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 ///
 /// // Construct map with a compactor that automatically combines
 /// // cells with the same save value.
-/// let mut monaco = HexMap::with_compactor(EqCompactor);
+/// let mut monaco = HexTreeMap::with_compactor(EqCompactor);
 ///
 /// // Now extend the map with cells and a region value.
 /// monaco.extend(cells.iter().copied().zip(std::iter::repeat(Region::Monaco)));
@@ -66,15 +67,16 @@ use std::{cmp::PartialEq, iter::FromIterator};
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
 )]
-pub struct HexMap<V, C = NullCompactor> {
+pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node<V>>]>,
     /// User-provided compator. Defaults to the null compactor.
     compactor: C,
 }
 
-impl<V> HexMap<V, NullCompactor> {
-    /// Constructs a new, empty `HexMap` with the no-op `NullCompactor`.
+impl<V> HexTreeMap<V, NullCompactor> {
+    /// Constructs a new, empty `HexTreeMap` with the no-op
+    /// `NullCompactor`.
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -89,7 +91,7 @@ impl<V> HexMap<V, NullCompactor> {
     }
 }
 
-impl<V, C: Compactor<V>> HexMap<V, C> {
+impl<V, C: Compactor<V>> HexTreeMap<V, C> {
     /// Adds a hexagon/value pair to the set.
     pub fn insert(&mut self, hex: H3Cell, value: V) {
         let base_cell = base(hex);
@@ -105,8 +107,9 @@ impl<V, C: Compactor<V>> HexMap<V, C> {
     }
 }
 
-impl<V, C> HexMap<V, C> {
-    /// Constructs a new, empty `HexMap` with the provided [compactor][crate::compaction].
+impl<V, C> HexTreeMap<V, C> {
+    /// Constructs a new, empty `HexTreeMap` with the provided
+    /// [compactor][crate::compaction].
     ///
     /// Incurs a single heap allocation to store all 122 resolution-0
     /// H3 cells.
@@ -120,13 +123,14 @@ impl<V, C> HexMap<V, C> {
         }
     }
 
-    /// Replace the current compactor with the new one, consuming `self`.
+    /// Replace the current compactor with the new one, consuming
+    /// `self`.
     ///
     /// This method is useful if you want to use one compaction
     /// strategy for creating an initial, then another one for updates
     /// later.
-    pub fn replace_compactor<NewC>(self, new_compactor: NewC) -> HexMap<V, NewC> {
-        HexMap {
+    pub fn replace_compactor<NewC>(self, new_compactor: NewC) -> HexTreeMap<V, NewC> {
+        HexTreeMap {
             nodes: self.nodes,
             compactor: new_compactor,
         }
@@ -207,18 +211,18 @@ impl<V, C> HexMap<V, C> {
     }
 }
 
-impl<V: PartialEq> Default for HexMap<V, NullCompactor> {
+impl<V: PartialEq> Default for HexTreeMap<V, NullCompactor> {
     fn default() -> Self {
-        HexMap::new()
+        HexTreeMap::new()
     }
 }
 
-impl<V> FromIterator<(H3Cell, V)> for HexMap<V, NullCompactor> {
+impl<V> FromIterator<(H3Cell, V)> for HexTreeMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (H3Cell, V)>,
     {
-        let mut map = HexMap::new();
+        let mut map = HexTreeMap::new();
         for (cell, value) in iter {
             map.insert(cell, value);
         }
@@ -226,12 +230,12 @@ impl<V> FromIterator<(H3Cell, V)> for HexMap<V, NullCompactor> {
     }
 }
 
-impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V, NullCompactor> {
+impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexTreeMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = (&'a H3Cell, &'a V)>,
     {
-        let mut map = HexMap::new();
+        let mut map = HexTreeMap::new();
         for (cell, value) in iter {
             map.insert(*cell, *value);
         }
@@ -239,7 +243,7 @@ impl<'a, V: Copy + 'a> FromIterator<(&'a H3Cell, &'a V)> for HexMap<V, NullCompa
     }
 }
 
-impl<V, C: Compactor<V>> Extend<(H3Cell, V)> for HexMap<V, C> {
+impl<V, C: Compactor<V>> Extend<(H3Cell, V)> for HexTreeMap<V, C> {
     fn extend<I: IntoIterator<Item = (H3Cell, V)>>(&mut self, iter: I) {
         for (cell, val) in iter {
             self.insert(cell, val)
@@ -247,7 +251,7 @@ impl<V, C: Compactor<V>> Extend<(H3Cell, V)> for HexMap<V, C> {
     }
 }
 
-impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a H3Cell, &'a V)> for HexMap<V, C> {
+impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a H3Cell, &'a V)> for HexTreeMap<V, C> {
     fn extend<I: IntoIterator<Item = (&'a H3Cell, &'a V)>>(&mut self, iter: I) {
         for (cell, val) in iter {
             self.insert(*cell, *val)
@@ -255,7 +259,7 @@ impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a H3Cell, &'a V)> for HexMap<V
     }
 }
 
-impl<V, C> std::ops::Index<H3Cell> for HexMap<V, C> {
+impl<V, C> std::ops::Index<H3Cell> for HexTreeMap<V, C> {
     type Output = V;
 
     /// Returns a reference to the value corresponding to the supplied
@@ -264,9 +268,9 @@ impl<V, C> std::ops::Index<H3Cell> for HexMap<V, C> {
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.insert(eiffel_tower_res12, "France");
@@ -275,13 +279,13 @@ impl<V, C> std::ops::Index<H3Cell> for HexMap<V, C> {
     ///
     /// # Panics
     ///
-    /// Panics if the cell is not present in the `HexMap`.
+    /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: H3Cell) -> &V {
         self.get(cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::Index<&H3Cell> for HexMap<V, C> {
+impl<V, C> std::ops::Index<&H3Cell> for HexTreeMap<V, C> {
     type Output = V;
 
     /// Returns a reference to the value corresponding to the supplied
@@ -290,9 +294,9 @@ impl<V, C> std::ops::Index<&H3Cell> for HexMap<V, C> {
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.insert(eiffel_tower_res12, "France");
@@ -301,22 +305,22 @@ impl<V, C> std::ops::Index<&H3Cell> for HexMap<V, C> {
     ///
     /// # Panics
     ///
-    /// Panics if the cell is not present in the `HexMap`.
+    /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: &H3Cell) -> &V {
         self.get(*cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::IndexMut<H3Cell> for HexMap<V, C> {
+impl<V, C> std::ops::IndexMut<H3Cell> for HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the supplied
     /// key.
     ///
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.insert(eiffel_tower_res12, "France");
@@ -328,22 +332,22 @@ impl<V, C> std::ops::IndexMut<H3Cell> for HexMap<V, C> {
     ///
     /// # Panics
     ///
-    /// Panics if the cell is not present in the `HexMap`.
+    /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: H3Cell) -> &mut V {
         self.get_mut(cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::IndexMut<&H3Cell> for HexMap<V, C> {
+impl<V, C> std::ops::IndexMut<&H3Cell> for HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the supplied
     /// key.
     ///
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexMap};
+    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
     ///
-    /// let mut map = HexMap::new();
+    /// let mut map = HexTreeMap::new();
     /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
     ///
     /// map.insert(eiffel_tower_res12, "France");
@@ -355,7 +359,7 @@ impl<V, C> std::ops::IndexMut<&H3Cell> for HexMap<V, C> {
     ///
     /// # Panics
     ///
-    /// Panics if the cell is not present in the `HexMap`.
+    /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: &H3Cell) -> &mut V {
         self.get_mut(*cell).expect("no entry found for cell")
     }

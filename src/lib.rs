@@ -3,10 +3,10 @@
 //! hextree provides tree structures that represent geographic regions with H3 cells.
 //!
 //! The primary structures are:
-//! - [`HexMap`][crate::HexMap]: an H3Cell-to-value map.
-//! - [`HexSet`][crate::HexSet]: an H3Cell set for hit-testing.
+//! - [`HexTreeMap`][crate::HexTreeMap]: an H3Cell-to-value map.
+//! - [`HexTreeSet`][crate::HexTreeSet]: an H3Cell set for hit-testing.
 //!
-//! You can think of `HexMap` vs. `HexSet` as [`HashMap`] vs. [`HashSet`].
+//! You can think of `HexTreeMap` vs. `HexTreeSet` as [`HashMap`] vs. [`HashSet`].
 //!
 //! For the rest of the documentation, we will use hextree to refer to
 //! the general data structure.
@@ -22,7 +22,7 @@
 //! compaction process _can_ continue to lowest resolution cells
 //! (res-0), possibly removing millions of redundant cells from the
 //! tree. For example, a set of 4,795,661 res-7 cells representing
-//! North America coalesces [into a 42,383 element `HexSet`][us915].
+//! North America coalesces [into a 42,383 element `HexTreeSet`][us915].
 //!
 //! A hextree's internal structure exactly matches the semantics of an
 //! [H3 cell]. The root of the tree has 122 resolution-0 nodes,
@@ -44,10 +44,10 @@
 pub mod compaction;
 mod digits;
 mod entry;
-pub mod hexmap;
-mod hexset;
+pub mod hex_tree_map;
+mod hex_tree_set;
 mod node;
 
-pub use crate::hexmap::HexMap;
-pub use crate::hexset::HexSet;
+pub use crate::hex_tree_map::HexTreeMap;
+pub use crate::hex_tree_set::HexTreeSet;
 pub use h3ron;
