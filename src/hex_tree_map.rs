@@ -7,6 +7,7 @@ use crate::{
     h3ron::H3Cell,
     node::Node,
 };
+use slab::Slab;
 use std::{cmp::PartialEq, iter::FromIterator};
 
 /// A HexTreeMap is a structure for mapping geographical regions to
@@ -62,7 +63,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// #     Ok(())
 /// # }
 /// ```
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 #[cfg_attr(
     feature = "serde-support",
     derive(serde::Serialize, serde::Deserialize)
@@ -70,6 +71,8 @@ use std::{cmp::PartialEq, iter::FromIterator};
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Node<V>>]>,
+    /// Memory pool
+    slab: Slab<Node<V>>,
     /// User-provided compator. Defaults to the null compactor.
     compactor: C,
 }
@@ -86,6 +89,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
                 .take(122)
                 .collect::<Vec<Option<Node<V>>>>()
                 .into_boxed_slice(),
+            slab: Slab::new(),
             compactor: NullCompactor,
         }
     }
@@ -97,10 +101,10 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
         let base_cell = base(hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor, &mut self.slab),
             None => {
                 let mut node = Node::new();
-                node.insert(0_u8, digits, value, &mut self.compactor);
+                node.insert(0_u8, digits, value, &mut self.compactor, &mut self.slab);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -119,6 +123,7 @@ impl<V, C> HexTreeMap<V, C> {
                 .take(122)
                 .collect::<Vec<Option<Node<V>>>>()
                 .into_boxed_slice(),
+            slab: Slab::new(),
             compactor,
         }
     }
@@ -132,6 +137,7 @@ impl<V, C> HexTreeMap<V, C> {
     pub fn replace_compactor<NewC>(self, new_compactor: NewC) -> HexTreeMap<V, NewC> {
         HexTreeMap {
             nodes: self.nodes,
+            slab: self.slab,
             compactor: new_compactor,
         }
     }
@@ -143,7 +149,11 @@ impl<V, C> HexTreeMap<V, C> {
     /// significantly smaller than the number of source cells used to
     /// create the set.
     pub fn len(&self) -> usize {
-        self.nodes.iter().flatten().map(|node| node.len()).sum()
+        self.nodes
+            .iter()
+            .flatten()
+            .map(|node| node.len(&self.slab))
+            .sum()
     }
 
     /// Returns `true` if the set contains no cells.
@@ -167,7 +177,7 @@ impl<V, C> HexTreeMap<V, C> {
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.contains(digits)
+                node.contains(digits, &self.slab)
             }
             None => false,
         }
@@ -180,7 +190,7 @@ impl<V, C> HexTreeMap<V, C> {
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.get(digits)
+                node.get(digits, &self.slab)
             }
             None => None,
         }
@@ -193,7 +203,7 @@ impl<V, C> HexTreeMap<V, C> {
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.get_mut(digits)
+                node.get_mut(digits, &mut self.slab)
             }
             None => None,
         }
