@@ -154,10 +154,49 @@ fn map_construction(c: &mut Criterion) {
     });
 }
 
+fn map_iteration(c: &mut Criterion) {
+    let mut group = c.benchmark_group("US915 pre-compacted HexTreeMap iteration");
+
+    let map_precompacted: HexTreeMap<u32> = COMPACT_US915_INDICES
+        .iter()
+        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .zip((0..).into_iter())
+        .collect();
+
+    group.bench_function("collect to vec", |b| {
+        b.iter(|| {
+            let out: Vec<(&H3Cell, &u32)> = map_precompacted.iter().collect();
+            out
+        })
+    });
+
+    group.bench_function("count", |b| b.iter(|| map_precompacted.iter().count()));
+}
+
+fn set_iteration(c: &mut Criterion) {
+    let mut group = c.benchmark_group("US915 pre-compacted HexTreeSet iteration");
+
+    let set_precompacted: HexTreeSet = COMPACT_US915_INDICES
+        .iter()
+        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .collect();
+
+    group.bench_function("collect to vec", |b| {
+        b.iter(|| {
+            let out: Vec<H3Cell> = set_precompacted.iter().map(|cv| *cv.0).collect();
+            out
+        })
+    });
+
+    group.bench_function("count", |b| b.iter(|| set_precompacted.iter().count()));
+}
+
 criterion_group!(
     benches,
     set_lookup,
     map_lookup,
+    set_iteration,
+    map_iteration,
     set_construction,
     map_construction,
 );

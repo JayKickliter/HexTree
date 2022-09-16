@@ -209,6 +209,13 @@ impl<V, C> HexTreeMap<V, C> {
             value: self.get_mut(hex).unwrap(),
         })
     }
+
+    /// An iterator visiting all cell-value pairs.
+    ///
+    /// The iterator element type is `(&H3Cell, &V)`.
+    pub fn iter(&self) -> impl Iterator<Item = (&H3Cell, &V)> {
+        crate::iteration::Iter::new(&self.nodes)
+    }
 }
 
 impl<V: PartialEq> Default for HexTreeMap<V, NullCompactor> {
