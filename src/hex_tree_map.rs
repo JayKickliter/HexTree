@@ -69,7 +69,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 )]
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
-    nodes: Box<[Option<Node<V>>]>,
+    nodes: Box<[Option<Box<Node<V>>>]>,
     /// User-provided compator. Defaults to the null compactor.
     compactor: C,
 }
@@ -84,8 +84,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
         Self {
             nodes: std::iter::repeat_with(|| None)
                 .take(122)
-                .collect::<Vec<Option<Node<V>>>>()
-                .into_boxed_slice(),
+                .collect::<Box<[Option<Box<Node<V>>>]>>(),
             compactor: NullCompactor,
         }
     }
@@ -119,8 +118,7 @@ impl<V, C> HexTreeMap<V, C> {
         Self {
             nodes: std::iter::repeat_with(|| None)
                 .take(122)
-                .collect::<Vec<Option<Node<V>>>>()
-                .into_boxed_slice(),
+                .collect::<Box<[Option<Box<Node<V>>>]>>(),
             compactor,
         }
     }
