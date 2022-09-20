@@ -210,11 +210,15 @@ impl<V, C> HexTreeMap<V, C> {
         })
     }
 
-    /// An iterator visiting all cell-value pairs.
-    ///
-    /// The iterator element type is `(&H3Cell, &V)`.
+    /// An iterator visiting all cell-value pairs in arbitrary order.
     pub fn iter(&self) -> impl Iterator<Item = (&H3Cell, &V)> {
         crate::iteration::Iter::new(&self.nodes)
+    }
+
+    /// An iterator visiting all cell-value pairs in arbitrary order
+    /// with mutable references to the values.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&H3Cell, &mut V)> {
+        crate::iteration::IterMut::new(&mut self.nodes)
     }
 }
 
