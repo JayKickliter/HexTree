@@ -46,6 +46,7 @@ mod digits;
 mod entry;
 pub mod hex_tree_map;
 mod hex_tree_set;
+mod iteration;
 mod node;
 
 pub use crate::hex_tree_map::HexTreeMap;

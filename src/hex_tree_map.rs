@@ -69,7 +69,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 )]
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
-    nodes: Box<[Option<Node<V>>]>,
+    nodes: Box<[Option<Box<Node<V>>>]>,
     /// User-provided compator. Defaults to the null compactor.
     compactor: C,
 }
@@ -84,8 +84,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
         Self {
             nodes: std::iter::repeat_with(|| None)
                 .take(122)
-                .collect::<Vec<Option<Node<V>>>>()
-                .into_boxed_slice(),
+                .collect::<Box<[Option<Box<Node<V>>>]>>(),
             compactor: NullCompactor,
         }
     }
@@ -97,10 +96,12 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
         let base_cell = base(hex);
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
             None => {
-                let mut node = Node::new();
-                node.insert(0_u8, digits, value, &mut self.compactor);
+                let mut node = Box::new(Node::new(
+                    hex.get_parent(0).expect("any hex can be promoted to res 0"),
+                ));
+                node.insert(hex, 0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -117,8 +118,7 @@ impl<V, C> HexTreeMap<V, C> {
         Self {
             nodes: std::iter::repeat_with(|| None)
                 .take(122)
-                .collect::<Vec<Option<Node<V>>>>()
-                .into_boxed_slice(),
+                .collect::<Box<[Option<Box<Node<V>>>]>>(),
             compactor,
         }
     }
@@ -208,6 +208,17 @@ impl<V, C> HexTreeMap<V, C> {
             hex,
             value: self.get_mut(hex).unwrap(),
         })
+    }
+
+    /// An iterator visiting all cell-value pairs in arbitrary order.
+    pub fn iter(&self) -> impl Iterator<Item = (&H3Cell, &V)> {
+        crate::iteration::Iter::new(&self.nodes)
+    }
+
+    /// An iterator visiting all cell-value pairs in arbitrary order
+    /// with mutable references to the values.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&H3Cell, &mut V)> {
+        crate::iteration::IterMut::new(&mut self.nodes)
     }
 }
 
