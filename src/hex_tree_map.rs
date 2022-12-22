@@ -375,3 +375,18 @@ impl<V, C> std::ops::IndexMut<&H3Cell> for HexTreeMap<V, C> {
         self.get_mut(*cell).expect("no entry found for cell")
     }
 }
+
+impl<V: std::fmt::Debug, C> std::fmt::Debug for HexTreeMap<V, C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use h3ron::Index;
+        f.write_str("{")?;
+        let mut iter = self.iter();
+        if let Some((cell, val)) = iter.next() {
+            write!(f, "{:x}: {:?}", cell.h3index(), val)?
+        }
+        for (cell, val) in iter {
+            write!(f, ", {:x}: {:?}", cell.h3index(), val)?
+        }
+        f.write_str("}")
+    }
+}
