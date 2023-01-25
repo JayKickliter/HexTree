@@ -19,15 +19,16 @@ all-features = true
 
 [features]
 default = []
-serde-support = ["h3ron/use-serde", "serde"]
+serde-support = ["serde"]
 
 [dependencies]
-h3ron = { version = "0.15" }
+bitfield = "0"
 serde = { version = "1", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 byteorder = "1"
 criterion = { version = "0.3", features = ["html_reports"] }
+h3ron = "*"
 geo-types = "0.7"
 
 [dev-dependencies.h3-lorawan-regions]

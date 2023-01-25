@@ -1,8 +1,4 @@
-use crate::{
-    compaction::Compactor,
-    digits::Digits,
-    h3ron::{H3Cell, Index},
-};
+use crate::{compaction::Compactor, digits::Digits, index::Index};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
@@ -18,12 +14,12 @@ use crate::{
 )]
 #[repr(align(64))]
 pub(crate) enum Node<V> {
-    Parent(H3Cell, [Option<Box<Node<V>>>; 7]),
-    Leaf(H3Cell, V),
+    Parent(Index, [Option<Box<Node<V>>>; 7]),
+    Leaf(Index, V),
 }
 
 impl<V> Node<V> {
-    pub(crate) fn new(hex: H3Cell) -> Self {
+    pub(crate) fn new(hex: Index) -> Self {
         Self::Parent(hex, [None, None, None, None, None, None, None])
     }
 
@@ -36,7 +32,7 @@ impl<V> Node<V> {
 
     pub(crate) fn insert<C>(
         &mut self,
-        hex: H3Cell,
+        hex: Index,
         res: u8,
         mut digits: Digits,
         value: V,
@@ -51,7 +47,7 @@ impl<V> Node<V> {
             }
             Some(digit) => match self {
                 Self::Leaf(leaf_hex, _) => {
-                    debug_assert_eq!(*leaf_hex, hex.get_parent(res).unwrap());
+                    debug_assert_eq!(*leaf_hex, hex.parent(res).unwrap());
                     return;
                 }
                 Self::Parent(parent_hex, children) => {
@@ -60,7 +56,7 @@ impl<V> Node<V> {
                         Some(node) => node.insert(hex, res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new(
-                                hex.get_parent(res + 1)
+                                hex.parent(res + 1)
                                     .expect("Digits returned Some, promotion should work"),
                             );
                             node.insert(hex, res + 1, digits, value, compactor);

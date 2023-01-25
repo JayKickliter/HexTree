@@ -46,9 +46,10 @@ mod digits;
 mod entry;
 pub mod hex_tree_map;
 mod hex_tree_set;
+mod index;
 mod iteration;
 mod node;
 
 pub use crate::hex_tree_map::HexTreeMap;
 pub use crate::hex_tree_set::HexTreeSet;
-pub use h3ron;
+pub use crate::index::Index;

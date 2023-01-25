@@ -1,4 +1,4 @@
-use h3ron::{H3Cell, Index};
+use crate::index::Index;
 
 pub(crate) struct Digits {
     digits: u64,
@@ -7,10 +7,10 @@ pub(crate) struct Digits {
 
 impl Digits {
     #[inline]
-    pub(crate) fn new(cell: H3Cell) -> Self {
-        let res = cell.resolution();
+    pub(crate) fn new(idx: Index) -> Self {
+        let res = idx.resolution();
         let mask = u128::MAX.wrapping_shl(64 - (3 * res as u32)) as u64;
-        let digits: u64 = cell.h3index().wrapping_shl(19) & mask;
+        let digits: u64 = idx.0.wrapping_shl(19) & mask;
         Self {
             digits,
             remaining: res,
@@ -35,14 +35,6 @@ impl Iterator for Digits {
     }
 }
 
-/// Returns a cell's base.
-#[inline]
-pub(crate) fn base(cell: H3Cell) -> u8 {
-    let index = cell.h3index();
-    let base = (index >> 0x2D) & 0b111_1111;
-    base as u8
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,8 +51,8 @@ mod tests {
             (608557861265473535, &[2, 0, 2, 3, 2, 1, 1]), // res 7
         ];
         for (index, ref_digits) in test_cases {
-            let cell = H3Cell::new(*index);
-            let digits = Digits::new(cell).collect::<Vec<u8>>();
+            let idx = Index::from_raw(*index).unwrap();
+            let digits = Digits::new(idx).collect::<Vec<u8>>();
             assert_eq!(&&digits, ref_digits);
         }
     }
