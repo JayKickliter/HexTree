@@ -10,26 +10,26 @@ bitfield::bitfield! {
         serde(transparent)
     )]
     pub struct Index(u64);
-    pub reserved,       _   : 63;
-    u8; pub mode,       _   : 62, 59;
+    pub reserved,       _              : 63;
+    u8; pub mode,       _              : 62, 59;
     u8; pub mode_dep,   set_mode_dep   : 58, 56;
-    u8; pub resolution, set_resolution   : 55, 52;
-    u8; pub base_cell,  set_base_cell   : 51, 45;
-    u8; pub res1digit,  set_res1digit   : 44, 42;
-    u8; pub res2digit,  set_res2digit   : 41, 39;
-    u8; pub res3digit,  set_res3digit   : 38, 36;
-    u8; pub res4digit,  set_res4digit   : 35, 33;
-    u8; pub res5digit,  set_res5digit   : 32, 30;
-    u8; pub res6digit,  set_res6digit   : 29, 27;
-    u8; pub res7digit,  set_res7digit   : 26, 24;
-    u8; pub res8digit,  set_res8digit   : 23, 21;
-    u8; pub res9digit,  set_res9digit   : 20, 18;
-    u8; pub res10digit, set_res10digit   : 17, 15;
-    u8; pub res11digit, set_res11digit   : 14, 12;
-    u8; pub res12digit, set_res12digit   : 11,  9;
-    u8; pub res13digit, set_res13digit   :  8,  6;
-    u8; pub res14digit, set_res14digit   :  5,  3;
-    u8; pub res15digit, set_res15digit   :  2,  0;
+    u8; pub resolution, set_resolution : 55, 52;
+    u8; pub base_cell,  set_base_cell  : 51, 45;
+    u8; pub res1digit,  set_res1digit  : 44, 42;
+    u8; pub res2digit,  set_res2digit  : 41, 39;
+    u8; pub res3digit,  set_res3digit  : 38, 36;
+    u8; pub res4digit,  set_res4digit  : 35, 33;
+    u8; pub res5digit,  set_res5digit  : 32, 30;
+    u8; pub res6digit,  set_res6digit  : 29, 27;
+    u8; pub res7digit,  set_res7digit  : 26, 24;
+    u8; pub res8digit,  set_res8digit  : 23, 21;
+    u8; pub res9digit,  set_res9digit  : 20, 18;
+    u8; pub res10digit, set_res10digit : 17, 15;
+    u8; pub res11digit, set_res11digit : 14, 12;
+    u8; pub res12digit, set_res12digit : 11,  9;
+    u8; pub res13digit, set_res13digit :  8,  6;
+    u8; pub res14digit, set_res14digit :  5,  3;
+    u8; pub res15digit, set_res15digit :  2,  0;
 }
 
 impl Index {
