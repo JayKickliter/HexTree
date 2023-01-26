@@ -4,7 +4,7 @@ pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use crate::{
     compaction::{Compactor, NullCompactor},
     digits::Digits,
-    index::Index,
+    index::Cell,
     node::Node,
 };
 use std::{cmp::PartialEq, iter::FromIterator};
@@ -28,16 +28,16 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// #
 /// # fn main() -> Result<(), Error> {
 /// use geo_types::coord;
-/// use hextree::{Index, compaction::EqCompactor, HexTreeMap};
+/// use hextree::{Cell, compaction::EqCompactor, HexTreeMap};
 /// use h3ron::H3Cell;
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
-/// #    use h3ron::{Index as H3Index, FromH3Index};
+/// #    use h3ron::{Index, FromH3Index};
 /// #    let idx_bytes = include_bytes!("../assets//monaco.res12.h3idx");
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
 /// #    while let Ok(idx) = rdr.read_u64::<LE>() {
-/// #        cells.push(Index::from_raw(idx).unwrap());
+/// #        cells.push(Cell::from_raw(idx).unwrap());
 /// #    }
 ///
 /// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -57,8 +57,8 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert_eq!(monaco.get(Index::from_raw(*point_1).unwrap()), Some(&Region::Monaco));
-/// assert_eq!(monaco.get(Index::from_raw(*point_2).unwrap()), None);
+/// assert_eq!(monaco.get(Cell::from_raw(*point_1).unwrap()), Some(&Region::Monaco));
+/// assert_eq!(monaco.get(Cell::from_raw(*point_2).unwrap()), None);
 ///
 /// #     Ok(())
 /// # }
@@ -93,7 +93,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
 
 impl<V, C: Compactor<V>> HexTreeMap<V, C> {
     /// Adds a hexagon/value pair to the set.
-    pub fn insert(&mut self, hex: Index, value: V) {
+    pub fn insert(&mut self, hex: Cell, value: V) {
         let base_cell = hex.base_cell();
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
@@ -163,7 +163,7 @@ impl<V, C> HexTreeMap<V, C> {
     ///    precisely this target hex.
     /// 3. The set contains a complete (leaf) parent of this target
     ///    hex due to 1 or 2.
-    pub fn contains(&self, hex: Index) -> bool {
+    pub fn contains(&self, hex: Cell) -> bool {
         let base_cell = hex.base_cell();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
@@ -176,7 +176,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get(&self, hex: Index) -> Option<&V> {
+    pub fn get(&self, hex: Cell) -> Option<&V> {
         let base_cell = hex.base_cell();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
@@ -189,7 +189,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get_mut(&mut self, hex: Index) -> Option<&mut V> {
+    pub fn get_mut(&mut self, hex: Cell) -> Option<&mut V> {
         let base_cell = hex.base_cell();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
@@ -201,7 +201,7 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// Gets the entry in the map for the corresponding cell.
-    pub fn entry(&'_ mut self, hex: Index) -> Entry<'_, V, C> {
+    pub fn entry(&'_ mut self, hex: Cell) -> Entry<'_, V, C> {
         if self.get(hex).is_none() {
             return Entry::Vacant(VacantEntry { hex, map: self });
         }
@@ -212,13 +212,13 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order.
-    pub fn iter(&self) -> impl Iterator<Item = (&Index, &V)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Cell, &V)> {
         crate::iteration::Iter::new(&self.nodes)
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order
     /// with mutable references to the values.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Index, &mut V)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Cell, &mut V)> {
         crate::iteration::IterMut::new(&mut self.nodes)
     }
 }
@@ -229,10 +229,10 @@ impl<V: PartialEq> Default for HexTreeMap<V, NullCompactor> {
     }
 }
 
-impl<V> FromIterator<(Index, V)> for HexTreeMap<V, NullCompactor> {
+impl<V> FromIterator<(Cell, V)> for HexTreeMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (Index, V)>,
+        I: IntoIterator<Item = (Cell, V)>,
     {
         let mut map = HexTreeMap::new();
         for (cell, value) in iter {
@@ -242,10 +242,10 @@ impl<V> FromIterator<(Index, V)> for HexTreeMap<V, NullCompactor> {
     }
 }
 
-impl<'a, V: Copy + 'a> FromIterator<(&'a Index, &'a V)> for HexTreeMap<V, NullCompactor> {
+impl<'a, V: Copy + 'a> FromIterator<(&'a Cell, &'a V)> for HexTreeMap<V, NullCompactor> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (&'a Index, &'a V)>,
+        I: IntoIterator<Item = (&'a Cell, &'a V)>,
     {
         let mut map = HexTreeMap::new();
         for (cell, value) in iter {
@@ -255,23 +255,23 @@ impl<'a, V: Copy + 'a> FromIterator<(&'a Index, &'a V)> for HexTreeMap<V, NullCo
     }
 }
 
-impl<V, C: Compactor<V>> Extend<(Index, V)> for HexTreeMap<V, C> {
-    fn extend<I: IntoIterator<Item = (Index, V)>>(&mut self, iter: I) {
+impl<V, C: Compactor<V>> Extend<(Cell, V)> for HexTreeMap<V, C> {
+    fn extend<I: IntoIterator<Item = (Cell, V)>>(&mut self, iter: I) {
         for (cell, val) in iter {
             self.insert(cell, val)
         }
     }
 }
 
-impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a Index, &'a V)> for HexTreeMap<V, C> {
-    fn extend<I: IntoIterator<Item = (&'a Index, &'a V)>>(&mut self, iter: I) {
+impl<'a, V: Copy + 'a, C: Compactor<V>> Extend<(&'a Cell, &'a V)> for HexTreeMap<V, C> {
+    fn extend<I: IntoIterator<Item = (&'a Cell, &'a V)>>(&mut self, iter: I) {
         for (cell, val) in iter {
             self.insert(*cell, *val)
         }
     }
 }
 
-impl<V, C> std::ops::Index<Index> for HexTreeMap<V, C> {
+impl<V, C> std::ops::Index<Cell> for HexTreeMap<V, C> {
     type Output = V;
 
     /// Returns a reference to the value corresponding to the supplied
@@ -280,10 +280,10 @@ impl<V, C> std::ops::Index<Index> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
-    /// use hextree::{Index, HexTreeMap};
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Index::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[eiffel_tower_res12], "France");
@@ -292,12 +292,12 @@ impl<V, C> std::ops::Index<Index> for HexTreeMap<V, C> {
     /// # Panics
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
-    fn index(&self, cell: Index) -> &V {
+    fn index(&self, cell: Cell) -> &V {
         self.get(cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::Index<&Index> for HexTreeMap<V, C> {
+impl<V, C> std::ops::Index<&Cell> for HexTreeMap<V, C> {
     type Output = V;
 
     /// Returns a reference to the value corresponding to the supplied
@@ -306,10 +306,10 @@ impl<V, C> std::ops::Index<&Index> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
-    /// use hextree::{Index, HexTreeMap};
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Index::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[&eiffel_tower_res12], "France");
@@ -318,22 +318,22 @@ impl<V, C> std::ops::Index<&Index> for HexTreeMap<V, C> {
     /// # Panics
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
-    fn index(&self, cell: &Index) -> &V {
+    fn index(&self, cell: &Cell) -> &V {
         self.get(*cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::IndexMut<Index> for HexTreeMap<V, C> {
+impl<V, C> std::ops::IndexMut<Cell> for HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the supplied
     /// key.
     ///
     /// # Examples
     ///
     /// ```
-    /// use hextree::{Index, HexTreeMap};
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Index::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[eiffel_tower_res12], "France");
@@ -345,22 +345,22 @@ impl<V, C> std::ops::IndexMut<Index> for HexTreeMap<V, C> {
     /// # Panics
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
-    fn index_mut(&mut self, cell: Index) -> &mut V {
+    fn index_mut(&mut self, cell: Cell) -> &mut V {
         self.get_mut(cell).expect("no entry found for cell")
     }
 }
 
-impl<V, C> std::ops::IndexMut<&Index> for HexTreeMap<V, C> {
+impl<V, C> std::ops::IndexMut<&Cell> for HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the supplied
     /// key.
     ///
     /// # Examples
     ///
     /// ```
-    /// use hextree::{Index, HexTreeMap};
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Index::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[&eiffel_tower_res12], "France");
@@ -372,7 +372,7 @@ impl<V, C> std::ops::IndexMut<&Index> for HexTreeMap<V, C> {
     /// # Panics
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
-    fn index_mut(&mut self, cell: &Index) -> &mut V {
+    fn index_mut(&mut self, cell: &Cell) -> &mut V {
         self.get_mut(*cell).expect("no entry found for cell")
     }
 }

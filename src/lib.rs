@@ -52,4 +52,4 @@ mod node;
 
 pub use crate::hex_tree_map::HexTreeMap;
 pub use crate::hex_tree_set::HexTreeSet;
-pub use crate::index::Index;
+pub use crate::index::Cell;

@@ -1,11 +1,11 @@
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use h3ron::H3Cell;
-use hextree::{compaction::EqCompactor, HexTreeMap, HexTreeSet, Index};
+use hextree::{compaction::EqCompactor, HexTreeMap, HexTreeSet, Cell};
 use std::convert::TryFrom;
 
 /// Perform a linear search of `region` for `target` cell.
-fn naive_contains(region: &[Index], target: Index) -> bool {
+fn naive_contains(region: &[Cell], target: Cell) -> bool {
     let promotions = (0..16)
         .into_iter()
         .map(|res| {
@@ -15,7 +15,7 @@ fn naive_contains(region: &[Index], target: Index) -> bool {
                 target
             }
         })
-        .collect::<Vec<Index>>();
+        .collect::<Vec<Cell>>();
     for &cell in region {
         if cell == promotions[cell.resolution() as usize] {
             return true;
@@ -24,10 +24,10 @@ fn naive_contains(region: &[Index], target: Index) -> bool {
     false
 }
 
-fn from_indicies(indicies: &[u64]) -> (HexTreeSet, Vec<Index>) {
-    let cells: Vec<Index> = indicies
+fn from_indicies(indicies: &[u64]) -> (HexTreeSet, Vec<Cell>) {
+    let cells: Vec<Cell> = indicies
         .iter()
-        .map(|&idx| Index::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
     let set: HexTreeSet = cells.iter().collect();
     (set, cells)
@@ -41,9 +41,9 @@ fn all_up() {
     let tarpon_springs = H3Cell::from_coordinate(coord! {x: -82.753822, y: 28.15215}, 12).unwrap();
     let gulf_of_mexico = H3Cell::from_coordinate(coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
     let paris = H3Cell::from_coordinate(coord! {x: 2.340340, y: 48.868680}, 12).unwrap();
-    let tarpon_springs = Index::try_from(*tarpon_springs).unwrap();
-    let gulf_of_mexico = Index::try_from(*gulf_of_mexico).unwrap();
-    let paris = Index::try_from(*paris).unwrap();
+    let tarpon_springs = Cell::try_from(*tarpon_springs).unwrap();
+    let gulf_of_mexico = Cell::try_from(*gulf_of_mexico).unwrap();
+    let paris = Cell::try_from(*paris).unwrap();
 
     assert!(us915_tree.contains(tarpon_springs));
     assert!(naive_contains(&us915_cells, tarpon_springs));
@@ -75,14 +75,14 @@ fn mono_map() {
 
     for (name, cells) in regions.iter() {
         for cell in cells.iter() {
-            monomap.insert(Index::try_from(*cell).unwrap(), name);
+            monomap.insert(Cell::try_from(*cell).unwrap(), name);
         }
     }
 
     for (name, cells) in regions.iter() {
         assert!(cells
             .iter()
-            .all(|c| monomap.get(Index::try_from(*c).unwrap()) == Some(&name)));
+            .all(|c| monomap.get(Cell::try_from(*c).unwrap()) == Some(&name)));
     }
 }
 
@@ -92,7 +92,7 @@ fn test_compaction() {
     let (mut us915_nocompact_tree, us915_nocompact_cells) =
         from_indicies(regions::nocompact::US915);
     let gulf_of_mexico = H3Cell::from_coordinate(coord! {x: -83.101920, y: 28.128096}, 0).unwrap();
-    let gulf_of_mexico = Index::try_from(*gulf_of_mexico).unwrap();
+    let gulf_of_mexico = Cell::try_from(*gulf_of_mexico).unwrap();
     assert_eq!(us915_tree.len(), us915_nocompact_tree.len());
     assert!(us915_tree == us915_nocompact_tree);
     assert!(us915_nocompact_tree.len() < us915_nocompact_cells.len());

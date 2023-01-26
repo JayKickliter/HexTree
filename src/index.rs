@@ -9,7 +9,7 @@ bitfield::bitfield! {
         derive(serde::Serialize, serde::Deserialize),
         serde(transparent)
     )]
-    pub struct Index(u64);
+    pub struct Cell(u64);
     pub reserved,       _              : 63;
     u8; pub mode,       _              : 62, 59;
     u8; pub mode_dep,   set_mode_dep   : 58, 56;
@@ -32,9 +32,9 @@ bitfield::bitfield! {
     u8; pub res15digit, set_res15digit :  2,  0;
 }
 
-impl Index {
+impl Cell {
     pub fn from_raw(raw: u64) -> Result<Self, ()> {
-        let idx = Index(raw);
+        let idx = Cell(raw);
         if
         // reserved must be 0
         !idx.reserved() &&
@@ -58,16 +58,16 @@ impl Index {
             let mut parent = *self;
             parent.set_resolution(res);
             let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
-            Some(Index(parent.0 | lower_bits))
+            Some(Cell(parent.0 | lower_bits))
         }
     }
 }
 
-impl TryFrom<u64> for Index {
+impl TryFrom<u64> for Cell {
     type Error = ();
 
-    fn try_from(raw: u64) -> Result<Index, ()> {
-        Index::from_raw(raw)
+    fn try_from(raw: u64) -> Result<Cell, ()> {
+        Cell::from_raw(raw)
     }
 }
 
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_index_bitfields() {
-        let idx = Index(0x85283473fffffff);
+        let idx = Cell(0x85283473fffffff);
         assert_eq!(idx.reserved(), false);
         assert_eq!(idx.mode(), 1);
         assert_eq!(idx.mode_dep(), 0);
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_index_to_parent() {
-        let idx = Index::try_from(0x85283473fffffff).unwrap();
+        let idx = Cell::try_from(0x85283473fffffff).unwrap();
         let parent = idx.parent(idx.resolution()).unwrap();
         assert_eq!(idx, parent);
         let parent = idx.parent(4).unwrap();

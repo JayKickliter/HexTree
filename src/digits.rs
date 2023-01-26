@@ -1,4 +1,4 @@
-use crate::index::Index;
+use crate::index::Cell;
 
 pub(crate) struct Digits {
     digits: u64,
@@ -7,7 +7,7 @@ pub(crate) struct Digits {
 
 impl Digits {
     #[inline]
-    pub(crate) fn new(idx: Index) -> Self {
+    pub(crate) fn new(idx: Cell) -> Self {
         let res = idx.resolution();
         let mask = u128::MAX.wrapping_shl(64 - (3 * res as u32)) as u64;
         let digits: u64 = idx.0.wrapping_shl(19) & mask;
@@ -51,7 +51,7 @@ mod tests {
             (608557861265473535, &[2, 0, 2, 3, 2, 1, 1]), // res 7
         ];
         for (index, ref_digits) in test_cases {
-            let idx = Index::from_raw(*index).unwrap();
+            let idx = Cell::from_raw(*index).unwrap();
             let digits = Digits::new(idx).collect::<Vec<u8>>();
             assert_eq!(&&digits, ref_digits);
         }

@@ -1,4 +1,4 @@
-use crate::{index::Index, node::Node};
+use crate::{index::Cell, node::Node};
 
 type NodeStackIter<'a, V> = std::iter::Flatten<std::slice::Iter<'a, Option<Box<Node<V>>>>>;
 
@@ -19,9 +19,9 @@ impl<'a, V> Iter<'a, V> {
 }
 
 impl<'a, V> Iterator for Iter<'a, V> {
-    type Item = (&'a Index, &'a V);
+    type Item = (&'a Cell, &'a V);
 
-    fn next(&mut self) -> Option<(&'a Index, &'a V)> {
+    fn next(&mut self) -> Option<(&'a Cell, &'a V)> {
         while self.curr.is_none() {
             if let Some(mut iter) = self.stack.pop() {
                 if let Some(node) = iter.next() {
@@ -68,9 +68,9 @@ impl<'a, V> IterMut<'a, V> {
 }
 
 impl<'a, V> Iterator for IterMut<'a, V> {
-    type Item = (&'a Index, &'a mut V);
+    type Item = (&'a Cell, &'a mut V);
 
-    fn next(&mut self) -> Option<(&'a Index, &'a mut V)> {
+    fn next(&mut self) -> Option<(&'a Cell, &'a mut V)> {
         while self.curr.is_none() {
             if let Some(mut iter) = self.stack.pop() {
                 if let Some(node) = iter.next() {
@@ -100,7 +100,7 @@ impl<'a, V> Iterator for IterMut<'a, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{index::Index, HexTreeMap};
+    use crate::{index::Cell, HexTreeMap};
     use byteorder::{LittleEndian as LE, ReadBytesExt};
     use std::convert::TryFrom;
 
@@ -110,10 +110,10 @@ mod tests {
         let rdr = &mut idx_bytes.as_slice();
 
         let cell_value_pairs = {
-            let mut cell_value_pairs: Vec<(Index, i32)> = Vec::new();
+            let mut cell_value_pairs: Vec<(Cell, i32)> = Vec::new();
             let mut count = 0;
             while let Ok(idx) = rdr.read_u64::<LE>() {
-                cell_value_pairs.push((Index::try_from(idx).unwrap(), count));
+                cell_value_pairs.push((Cell::try_from(idx).unwrap(), count));
                 count += 1;
             }
             cell_value_pairs
@@ -128,7 +128,7 @@ mod tests {
         };
 
         let map_collected = {
-            let mut map_collected: Vec<(Index, i32)> = map.iter().map(|(c, v)| (*c, *v)).collect();
+            let mut map_collected: Vec<(Cell, i32)> = map.iter().map(|(c, v)| (*c, *v)).collect();
             map_collected.sort_by(|a, b| a.1.cmp(&b.1));
             map_collected
         };
@@ -142,10 +142,10 @@ mod tests {
         let rdr = &mut idx_bytes.as_slice();
 
         let cell_value_pairs = {
-            let mut cell_value_pairs: Vec<(Index, i32)> = Vec::new();
+            let mut cell_value_pairs: Vec<(Cell, i32)> = Vec::new();
             let mut count = 0;
             while let Ok(idx) = rdr.read_u64::<LE>() {
-                cell_value_pairs.push((Index::try_from(idx).unwrap(), count));
+                cell_value_pairs.push((Cell::try_from(idx).unwrap(), count));
                 count += 1;
             }
             cell_value_pairs

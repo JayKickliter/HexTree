@@ -1,4 +1,4 @@
-use crate::{compaction::Compactor, digits::Digits, index::Index};
+use crate::{compaction::Compactor, digits::Digits, index::Cell};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
@@ -14,12 +14,12 @@ use crate::{compaction::Compactor, digits::Digits, index::Index};
 )]
 #[repr(align(64))]
 pub(crate) enum Node<V> {
-    Parent(Index, [Option<Box<Node<V>>>; 7]),
-    Leaf(Index, V),
+    Parent(Cell, [Option<Box<Node<V>>>; 7]),
+    Leaf(Cell, V),
 }
 
 impl<V> Node<V> {
-    pub(crate) fn new(hex: Index) -> Self {
+    pub(crate) fn new(hex: Cell) -> Self {
         Self::Parent(hex, [None, None, None, None, None, None, None])
     }
 
@@ -32,7 +32,7 @@ impl<V> Node<V> {
 
     pub(crate) fn insert<C>(
         &mut self,
-        hex: Index,
+        hex: Cell,
         res: u8,
         mut digits: Digits,
         value: V,

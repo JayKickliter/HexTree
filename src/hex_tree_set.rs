@@ -1,4 +1,4 @@
-use crate::{compaction::SetCompactor, index::Index, HexTreeMap};
+use crate::{compaction::SetCompactor, index::Cell, HexTreeMap};
 use std::iter::FromIterator;
 
 /// A HexTreeSet is a structure for representing geographical regions
@@ -20,7 +20,7 @@ use std::iter::FromIterator;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// use geo_types::coord;
-/// use hextree::{Index, HexTreeSet};
+/// use hextree::{Cell, HexTreeSet};
 /// use h3ron::H3Cell;
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
@@ -29,7 +29,7 @@ use std::iter::FromIterator;
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
 /// #    while let Ok(idx) = rdr.read_u64::<LE>() {
-/// #        cells.push(Index::from_raw(idx).unwrap());
+/// #        cells.push(Cell::from_raw(idx).unwrap());
 /// #    }
 ///
 /// // `cells` is a slice of `Index`s
@@ -40,18 +40,18 @@ use std::iter::FromIterator;
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert!(monaco.contains(Index::from_raw(*point_1).unwrap()));
-/// assert!(!monaco.contains(Index::from_raw(*point_2).unwrap()));
+/// assert!(monaco.contains(Cell::from_raw(*point_1).unwrap()));
+/// assert!(!monaco.contains(Cell::from_raw(*point_2).unwrap()));
 ///
 /// #     Ok(())
 /// # }
 /// ```
 pub type HexTreeSet = HexTreeMap<(), SetCompactor>;
 
-impl FromIterator<Index> for HexTreeSet {
+impl FromIterator<Cell> for HexTreeSet {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = Index>,
+        I: IntoIterator<Item = Cell>,
     {
         let mut set = HexTreeMap::with_compactor(SetCompactor);
         for cell in iter {
@@ -61,10 +61,10 @@ impl FromIterator<Index> for HexTreeSet {
     }
 }
 
-impl<'a> FromIterator<&'a Index> for HexTreeSet {
+impl<'a> FromIterator<&'a Cell> for HexTreeSet {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = &'a Index>,
+        I: IntoIterator<Item = &'a Cell>,
     {
         let mut set = HexTreeMap::with_compactor(SetCompactor);
         for cell in iter {
