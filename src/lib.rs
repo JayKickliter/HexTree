@@ -44,6 +44,7 @@
 pub mod compaction;
 mod digits;
 mod entry;
+mod error;
 pub mod hex_tree_map;
 mod hex_tree_set;
 mod index;
@@ -53,3 +54,4 @@ mod node;
 pub use crate::hex_tree_map::HexTreeMap;
 pub use crate::hex_tree_set::HexTreeSet;
 pub use crate::index::Cell;
+pub use error::{Error, Result};

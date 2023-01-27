@@ -1,4 +1,5 @@
 #![allow(missing_docs)]
+use crate::{Error, Result};
 use std::convert::TryFrom;
 
 bitfield::bitfield! {
@@ -33,7 +34,7 @@ bitfield::bitfield! {
 }
 
 impl Cell {
-    pub fn from_raw(raw: u64) -> Result<Self, ()> {
+    pub fn from_raw(raw: u64) -> Result<Self> {
         let idx = Cell(raw);
         if
         // reserved must be 0
@@ -45,28 +46,28 @@ impl Cell {
         {
             Ok(idx)
         } else {
-            Err(())
+            Err(Error::Invalid(raw))
         }
     }
 
     pub fn parent(&self, res: u8) -> Option<Self> {
-        if self.resolution() < res {
-            None
-        } else if res == self.resolution() {
-            Some(*self)
-        } else {
-            let mut parent = *self;
-            parent.set_resolution(res);
-            let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
-            Some(Cell(parent.0 | lower_bits))
+        match self.resolution() {
+            v if v < res => None,
+            v if v == res => Some(*self),
+            _ => {
+                let mut parent = *self;
+                parent.set_resolution(res);
+                let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
+                Some(Cell(parent.0 | lower_bits))
+            }
         }
     }
 }
 
 impl TryFrom<u64> for Cell {
-    type Error = ();
+    type Error = Error;
 
-    fn try_from(raw: u64) -> Result<Cell, ()> {
+    fn try_from(raw: u64) -> Result<Cell> {
         Cell::from_raw(raw)
     }
 }
