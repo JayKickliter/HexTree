@@ -54,7 +54,7 @@ impl Cell {
         {
             Ok(Cell(idx.0))
         } else {
-            Err(Error::Invalid(raw))
+            Err(Error::Index(raw))
         }
     }
 
