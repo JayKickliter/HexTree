@@ -1,4 +1,3 @@
-#![allow(missing_docs)]
 use crate::{Error, Result};
 use std::{convert::TryFrom, fmt};
 
