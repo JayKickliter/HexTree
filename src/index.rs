@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 use crate::{Error, Result};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt};
 
 bitfield::bitfield! {
     /// An H3 index.
@@ -10,7 +10,7 @@ bitfield::bitfield! {
         derive(serde::Serialize, serde::Deserialize),
         serde(transparent)
     )]
-    pub struct Cell(u64);
+    pub struct Index(u64);
     pub reserved,       _              : 63;
     u8; pub mode,       _              : 62, 59;
     u8; pub mode_dep,   set_mode_dep   : 58, 56;
@@ -33,9 +33,17 @@ bitfield::bitfield! {
     u8; pub res15digit, set_res15digit :  2,  0;
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
+pub struct Cell(pub(crate) Index);
+
 impl Cell {
     pub fn from_raw(raw: u64) -> Result<Self> {
-        let idx = Cell(raw);
+        let idx = Index(raw);
         if
         // reserved must be 0
         !idx.reserved() &&
@@ -44,10 +52,14 @@ impl Cell {
         // there are only 122 base cells
         idx.base_cell() < 122
         {
-            Ok(idx)
+            Ok(Cell(idx))
         } else {
             Err(Error::Invalid(raw))
         }
+    }
+
+    pub fn into_raw(self) -> u64 {
+        self.0 .0
     }
 
     pub fn parent(&self, res: u8) -> Option<Self> {
@@ -55,12 +67,23 @@ impl Cell {
             v if v < res => None,
             v if v == res => Some(*self),
             _ => {
-                let mut parent = *self;
-                parent.set_resolution(res);
+                let mut idx = self.0;
+                idx.set_resolution(res);
                 let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
-                Some(Cell(parent.0 | lower_bits))
+                let raw = idx.0 | lower_bits;
+                Some(Cell(Index(raw)))
             }
         }
+    }
+
+    pub fn base(&self) -> u8 {
+        let base = self.0.base_cell();
+        debug_assert!(base < 122, "valid base indices are [0,122]");
+        base
+    }
+
+    pub fn resolution(&self) -> u8 {
+        self.0.resolution()
     }
 }
 
@@ -72,13 +95,19 @@ impl TryFrom<u64> for Cell {
     }
 }
 
+impl fmt::Debug for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
+        write!(f, "{:0x}", self.0 .0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_index_bitfields() {
-        let idx = Cell(0x85283473fffffff);
+        let idx = Index(0x85283473fffffff);
         assert_eq!(idx.reserved(), false);
         assert_eq!(idx.mode(), 1);
         assert_eq!(idx.mode_dep(), 0);
@@ -102,19 +131,19 @@ mod tests {
     }
 
     #[test]
-    fn test_index_to_parent() {
+    fn test_cell_to_parent() {
         let idx = Cell::try_from(0x85283473fffffff).unwrap();
         let parent = idx.parent(idx.resolution()).unwrap();
         assert_eq!(idx, parent);
         let parent = idx.parent(4).unwrap();
         assert_eq!(parent.resolution(), 4);
-        assert_eq!(parent.res5digit(), 7);
-        assert_eq!(parent.res4digit(), 3);
+        assert_eq!(parent.0.res5digit(), 7);
+        assert_eq!(parent.0.res4digit(), 3);
         let parent = idx.parent(0).unwrap();
-        assert_eq!(parent.res4digit(), 7);
-        assert_eq!(parent.res3digit(), 7);
-        assert_eq!(parent.res2digit(), 7);
-        assert_eq!(parent.res1digit(), 7);
-        assert_eq!(parent.base_cell(), 20);
+        assert_eq!(parent.0.res4digit(), 7);
+        assert_eq!(parent.0.res3digit(), 7);
+        assert_eq!(parent.0.res2digit(), 7);
+        assert_eq!(parent.0.res1digit(), 7);
+        assert_eq!(parent.0.base_cell(), 20);
     }
 }

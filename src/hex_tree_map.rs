@@ -94,7 +94,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
 impl<V, C: Compactor<V>> HexTreeMap<V, C> {
     /// Adds a hexagon/value pair to the set.
     pub fn insert(&mut self, hex: Cell, value: V) {
-        let base_cell = hex.base_cell();
+        let base_cell = hex.base();
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
@@ -164,7 +164,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// 3. The set contains a complete (leaf) parent of this target
     ///    hex due to 1 or 2.
     pub fn contains(&self, hex: Cell) -> bool {
-        let base_cell = hex.base_cell();
+        let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
@@ -177,7 +177,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
     pub fn get(&self, hex: Cell) -> Option<&V> {
-        let base_cell = hex.base_cell();
+        let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
@@ -190,7 +190,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
     pub fn get_mut(&mut self, hex: Cell) -> Option<&mut V> {
-        let base_cell = hex.base_cell();
+        let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
                 let digits = Digits::new(hex);
@@ -382,10 +382,10 @@ impl<V: std::fmt::Debug, C> std::fmt::Debug for HexTreeMap<V, C> {
         f.write_str("{")?;
         let mut iter = self.iter();
         if let Some((cell, val)) = iter.next() {
-            write!(f, "{:x}: {:?}", cell.0, val)?
+            write!(f, "{:?}: {:?}", cell, val)?
         }
         for (cell, val) in iter {
-            write!(f, ", {:x}: {:?}", cell.0, val)?
+            write!(f, ", {:?}: {:?}", cell, val)?
         }
         f.write_str("}")
     }
