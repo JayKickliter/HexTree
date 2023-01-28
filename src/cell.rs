@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use crate::{Error, Result};
 use std::{convert::TryFrom, fmt};
 
@@ -38,7 +39,7 @@ bitfield::bitfield! {
     derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
-pub struct Cell(pub(crate) Index);
+pub struct Cell(pub(crate) u64);
 
 impl Cell {
     pub fn from_raw(raw: u64) -> Result<Self> {
@@ -51,38 +52,38 @@ impl Cell {
         // there are only 122 base cells
         idx.base_cell() < 122
         {
-            Ok(Cell(idx))
+            Ok(Cell(idx.0))
         } else {
             Err(Error::Invalid(raw))
         }
     }
 
     pub fn into_raw(self) -> u64 {
-        self.0 .0
+        self.0
     }
 
-    pub fn parent(&self, res: u8) -> Option<Self> {
-        match self.resolution() {
+    pub fn to_parent(&self, res: u8) -> Option<Self> {
+        match self.res() {
             v if v < res => None,
             v if v == res => Some(*self),
             _ => {
-                let mut idx = self.0;
+                let mut idx = Index(self.0);
                 idx.set_resolution(res);
                 let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
                 let raw = idx.0 | lower_bits;
-                Some(Cell(Index(raw)))
+                Some(Cell(raw))
             }
         }
     }
 
     pub fn base(&self) -> u8 {
-        let base = self.0.base_cell();
+        let base = Index(self.0).base_cell();
         debug_assert!(base < 122, "valid base indices are [0,122]");
         base
     }
 
-    pub fn resolution(&self) -> u8 {
-        self.0.resolution()
+    pub fn res(&self) -> u8 {
+        Index(self.0).resolution()
     }
 }
 
@@ -96,7 +97,7 @@ impl TryFrom<u64> for Cell {
 
 impl fmt::Debug for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
-        write!(f, "{:0x}", self.0 .0)
+        write!(f, "{:0x}", self.0)
     }
 }
 
@@ -131,18 +132,20 @@ mod tests {
 
     #[test]
     fn test_cell_to_parent() {
-        let idx = Cell::try_from(0x85283473fffffff).unwrap();
-        let parent = idx.parent(idx.resolution()).unwrap();
-        assert_eq!(idx, parent);
-        let parent = idx.parent(4).unwrap();
-        assert_eq!(parent.resolution(), 4);
-        assert_eq!(parent.0.res5digit(), 7);
-        assert_eq!(parent.0.res4digit(), 3);
-        let parent = idx.parent(0).unwrap();
-        assert_eq!(parent.0.res4digit(), 7);
-        assert_eq!(parent.0.res3digit(), 7);
-        assert_eq!(parent.0.res2digit(), 7);
-        assert_eq!(parent.0.res1digit(), 7);
-        assert_eq!(parent.0.base_cell(), 20);
+        let cell = Cell::try_from(0x85283473fffffff).unwrap();
+        let parent = cell.to_parent(cell.res()).unwrap();
+        assert_eq!(cell, parent);
+        let parent = cell.to_parent(4).unwrap();
+        let parent_idx = Index(parent.0);
+        assert_eq!(parent.res(), 4);
+        assert_eq!(parent_idx.res5digit(), 7);
+        assert_eq!(parent_idx.res4digit(), 3);
+        let parent = cell.to_parent(0).unwrap();
+        let parent_idx = Index(parent.0);
+        assert_eq!(parent_idx.res4digit(), 7);
+        assert_eq!(parent_idx.res3digit(), 7);
+        assert_eq!(parent_idx.res2digit(), 7);
+        assert_eq!(parent_idx.res1digit(), 7);
+        assert_eq!(parent_idx.base_cell(), 20);
     }
 }

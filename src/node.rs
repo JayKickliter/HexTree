@@ -42,21 +42,21 @@ impl<V> Node<V> {
     {
         match digits.next() {
             None => {
-                debug_assert_eq!(res, hex.resolution());
+                debug_assert_eq!(res, hex.res());
                 *self = Self::Leaf(hex, value)
             }
             Some(digit) => match self {
                 Self::Leaf(leaf_hex, _) => {
-                    debug_assert_eq!(*leaf_hex, hex.parent(res).unwrap());
+                    debug_assert_eq!(*leaf_hex, hex.to_parent(res).unwrap());
                     return;
                 }
                 Self::Parent(parent_hex, children) => {
-                    debug_assert_eq!(parent_hex.resolution(), res);
+                    debug_assert_eq!(parent_hex.res(), res);
                     match children[digit as usize].as_mut() {
                         Some(node) => node.insert(hex, res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new(
-                                hex.parent(res + 1)
+                                hex.to_parent(res + 1)
                                     .expect("Digits returned Some, promotion should work"),
                             );
                             node.insert(hex, res + 1, digits, value, compactor);
@@ -74,7 +74,7 @@ impl<V> Node<V> {
         C: Compactor<V>,
     {
         if let Self::Parent(hex, children) = self {
-            debug_assert_eq!(hex.resolution(), res);
+            debug_assert_eq!(hex.res(), res);
             if children
                 .iter()
                 .any(|n| matches!(n.as_ref().map(|n| n.as_ref()), Some(Self::Parent(_, _))))

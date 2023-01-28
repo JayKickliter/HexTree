@@ -100,7 +100,7 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
             Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
             None => {
                 let mut node = Box::new(Node::new(
-                    hex.parent(0).expect("any hex can be promoted to res 0"),
+                    hex.to_parent(0).expect("any hex can be promoted to res 0"),
                 ));
                 node.insert(hex, 0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);

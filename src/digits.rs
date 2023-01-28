@@ -8,9 +8,9 @@ pub(crate) struct Digits {
 impl Digits {
     #[inline]
     pub(crate) fn new(cell: Cell) -> Self {
-        let res = cell.resolution();
+        let res = cell.res();
         let mask = u128::MAX.wrapping_shl(64 - (3 * res as u32)) as u64;
-        let digits: u64 = cell.0 .0.wrapping_shl(19) & mask;
+        let digits: u64 = cell.0.wrapping_shl(19) & mask;
         Self {
             digits,
             remaining: res,

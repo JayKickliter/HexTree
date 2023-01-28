@@ -9,15 +9,15 @@ fn naive_contains(region: &[Cell], target: Cell) -> bool {
     let promotions = (0..16)
         .into_iter()
         .map(|res| {
-            if res < target.resolution() {
-                target.parent(res).unwrap()
+            if res < target.res() {
+                target.to_parent(res).unwrap()
             } else {
                 target
             }
         })
         .collect::<Vec<Cell>>();
     for &cell in region {
-        if cell == promotions[cell.resolution() as usize] {
+        if cell == promotions[cell.res() as usize] {
             return true;
         }
     }
