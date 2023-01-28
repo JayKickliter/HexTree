@@ -1,4 +1,4 @@
-use crate::{index::Cell, node::Node};
+use crate::{node::Node, Cell};
 
 type NodeStackIter<'a, V> = std::iter::Flatten<std::slice::Iter<'a, Option<Box<Node<V>>>>>;
 
@@ -100,7 +100,7 @@ impl<'a, V> Iterator for IterMut<'a, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{index::Cell, HexTreeMap};
+    use crate::{Cell, HexTreeMap};
     use byteorder::{LittleEndian as LE, ReadBytesExt};
     use std::convert::TryFrom;
 

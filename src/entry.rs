@@ -1,6 +1,6 @@
 //! `HexTreeMap`'s Entry API.
 
-use crate::{compaction::Compactor, index::Cell, HexTreeMap};
+use crate::{compaction::Compactor, Cell, HexTreeMap};
 
 /// A view into a single entry in a map, which may either be vacant or
 /// occupied.

@@ -1,4 +1,4 @@
-use crate::{compaction::Compactor, digits::Digits, index::Cell};
+use crate::{compaction::Compactor, digits::Digits, Cell};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the

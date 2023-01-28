@@ -41,17 +41,17 @@
 //! [compaction]: crate::compaction
 //! [us915]: https://www.google.com/maps/d/u/0/edit?mid=15wRzxmtmyzqf6fHU3yuW4hJAM9MoxLJs
 
+mod cell;
 pub mod compaction;
 mod digits;
 mod entry;
 mod error;
 pub mod hex_tree_map;
 mod hex_tree_set;
-mod index;
 mod iteration;
 mod node;
 
+pub use crate::cell::Cell;
 pub use crate::hex_tree_map::HexTreeMap;
 pub use crate::hex_tree_set::HexTreeSet;
-pub use crate::index::Cell;
 pub use error::{Error, Result};

@@ -4,8 +4,8 @@ pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use crate::{
     compaction::{Compactor, NullCompactor},
     digits::Digits,
-    index::Cell,
     node::Node,
+    Cell,
 };
 use std::{cmp::PartialEq, iter::FromIterator};
 

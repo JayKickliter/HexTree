@@ -1,4 +1,4 @@
-use crate::{compaction::SetCompactor, index::Cell, HexTreeMap};
+use crate::{compaction::SetCompactor, Cell, HexTreeMap};
 use std::iter::FromIterator;
 
 /// A HexTreeSet is a structure for representing geographical regions

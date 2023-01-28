@@ -1,4 +1,4 @@
-use crate::index::Cell;
+use crate::Cell;
 
 pub(crate) struct Digits {
     digits: u64,
