@@ -4,7 +4,7 @@ use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
 use h3ron::H3Cell;
-use hextree::{compaction::EqCompactor, HexTreeMap, HexTreeSet, Cell};
+use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
 use std::convert::TryFrom;
 
 fn set_lookup(c: &mut Criterion) {

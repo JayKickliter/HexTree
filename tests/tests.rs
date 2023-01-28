@@ -1,7 +1,7 @@
 use geo_types::coord;
 use h3_lorawan_regions as regions;
 use h3ron::H3Cell;
-use hextree::{compaction::EqCompactor, HexTreeMap, HexTreeSet, Cell};
+use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
 use std::convert::TryFrom;
 
 /// Perform a linear search of `region` for `target` cell.

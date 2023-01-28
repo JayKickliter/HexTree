@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test_index_bitfields() {
         let idx = Index(0x85283473fffffff);
-        assert_eq!(idx.reserved(), false);
+        assert!(!idx.reserved());
         assert_eq!(idx.mode(), 1);
         assert_eq!(idx.mode_dep(), 0);
         assert_eq!(idx.resolution(), 5);
