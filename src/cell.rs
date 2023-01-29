@@ -1,4 +1,3 @@
-#![allow(missing_docs)]
 use crate::{Error, Result};
 use std::{convert::TryFrom, fmt};
 
@@ -33,6 +32,7 @@ bitfield::bitfield! {
     u8; pub res15digit, set_res15digit :  2,  0;
 }
 
+/// [HexTreeMap][crate::HexTreeMap]'s key type.
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde-support",
@@ -42,6 +42,14 @@ bitfield::bitfield! {
 pub struct Cell(pub(crate) u64);
 
 impl Cell {
+    /// Constructs a new Cell from a raw [u64] H3 index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if u64 is not a valid [bit-representation] of
+    /// an H3 cell (mode 1 H3 index).
+    ///
+    /// [bit-representation]: https://h3geo.org/docs/core-library/h3Indexing/
     pub fn from_raw(raw: u64) -> Result<Self> {
         let idx = Index(raw);
         if
@@ -58,10 +66,15 @@ impl Cell {
         }
     }
 
+    /// Returns the raw [u64] H3 index for this cell.
     pub fn into_raw(self) -> u64 {
         self.0
     }
 
+    /// Returns this cell's parent at the specified resolution.
+    ///
+    /// Returns Some if `res` is less-than or equal-to this cell's
+    /// resolution, otherwise returns None.
     pub fn to_parent(&self, res: u8) -> Option<Self> {
         match self.res() {
             v if v < res => None,
@@ -76,12 +89,14 @@ impl Cell {
         }
     }
 
+    /// Returns this cell's base (res-0 parent).
     pub fn base(&self) -> u8 {
         let base = Index(self.0).base_cell();
         debug_assert!(base < 122, "valid base indices are [0,122]");
         base
     }
 
+    /// Returns this cell's resolution.
     pub fn res(&self) -> u8 {
         Index(self.0).resolution()
     }
@@ -96,8 +111,24 @@ impl TryFrom<u64> for Cell {
 }
 
 impl fmt::Debug for Cell {
+    /// [H3 Index](https://h3geo.org/docs/core-library/h3Indexing/):
+    /// > The canonical string representation of an H3Index is the
+    /// > hexadecimal representation of the integer, using lowercase
+    /// > letters. The string representation is variable length (no zero
+    /// > padding) and is not prefixed or suffixed.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
         write!(f, "{:0x}", self.0)
+    }
+}
+
+impl fmt::Display for Cell {
+    /// [H3 Index](https://h3geo.org/docs/core-library/h3Indexing/):
+    /// > The canonical string representation of an H3Index is the
+    /// > hexadecimal representation of the integer, using lowercase
+    /// > letters. The string representation is variable length (no zero
+    /// > padding) and is not prefixed or suffixed.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
+        write!(f, "{:x}", self.0)
     }
 }
 
