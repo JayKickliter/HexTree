@@ -38,10 +38,11 @@ where
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .and_modify(|v| *v = "Paris")
@@ -52,6 +53,8 @@ where
     ///     .and_modify(|v| *v = "Paris")
     ///     .or_insert("France");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn and_modify<F>(self, f: F) -> Self
     where
@@ -73,14 +76,17 @@ where
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .or_insert("Paris");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_insert(self, default: V) -> &'a mut V {
         match self {
@@ -100,14 +106,17 @@ where
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .or_insert_with(|| "Paris");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_insert_with<F>(self, default: F) -> &'a mut V
     where
@@ -136,13 +145,16 @@ where
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map: HexTreeMap<Option<&str>> = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12).or_default();
     /// assert_eq!(map[eiffel_tower_res12], None);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_default(self) -> &'a mut V {
         match self {

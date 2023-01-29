@@ -26,7 +26,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// ```
 /// # use h3ron::Error;
 /// #
-/// # fn main() -> Result<(), Error> {
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use geo_types::coord;
 /// use hextree::{Cell, compaction::EqCompactor, HexTreeMap};
 /// use h3ron::H3Cell;
@@ -37,7 +37,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
 /// #    while let Ok(idx) = rdr.read_u64::<LE>() {
-/// #        cells.push(Cell::from_raw(idx).unwrap());
+/// #        cells.push(Cell::from_raw(idx)?);
 /// #    }
 ///
 /// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -57,8 +57,8 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert_eq!(monaco.get(Cell::from_raw(*point_1).unwrap()), Some(&Region::Monaco));
-/// assert_eq!(monaco.get(Cell::from_raw(*point_2).unwrap()), None);
+/// assert_eq!(monaco.get(Cell::from_raw(*point_1)?), Some(&Region::Monaco));
+/// assert_eq!(monaco.get(Cell::from_raw(*point_2)?), None);
 ///
 /// #     Ok(())
 /// # }
@@ -280,13 +280,16 @@ impl<V, C> std::ops::Index<Cell> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[eiffel_tower_res12], "France");
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Panics
@@ -306,13 +309,16 @@ impl<V, C> std::ops::Index<&Cell> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[&eiffel_tower_res12], "France");
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Panics
@@ -330,16 +336,19 @@ impl<V, C> std::ops::IndexMut<Cell> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[eiffel_tower_res12], "France");
     ///
     /// map[eiffel_tower_res12] = "Paris";
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Panics
@@ -357,16 +366,19 @@ impl<V, C> std::ops::IndexMut<&Cell> for HexTreeMap<V, C> {
     /// # Examples
     ///
     /// ```
+    /// # fn main() -> hextree::Result<()> {;
     /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff).unwrap();
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.insert(eiffel_tower_res12, "France");
     /// assert_eq!(map[&eiffel_tower_res12], "France");
     ///
     /// map[&eiffel_tower_res12] = "Paris";
     /// assert_eq!(map[&eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Panics
@@ -382,10 +394,10 @@ impl<V: std::fmt::Debug, C> std::fmt::Debug for HexTreeMap<V, C> {
         f.write_str("{")?;
         let mut iter = self.iter();
         if let Some((cell, val)) = iter.next() {
-            write!(f, "{:?}: {:?}", cell, val)?
+            write!(f, "{cell:?}: {val:?}")?
         }
         for (cell, val) in iter {
-            write!(f, ", {:?}: {:?}", cell, val)?
+            write!(f, ", {cell:?}: {val:?}")?
         }
         f.write_str("}")
     }

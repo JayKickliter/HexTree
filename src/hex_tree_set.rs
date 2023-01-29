@@ -18,7 +18,7 @@ use std::iter::FromIterator;
 /// ```
 /// # use h3ron::Error;
 /// #
-/// # fn main() -> Result<(), Error> {
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use geo_types::coord;
 /// use hextree::{Cell, HexTreeSet};
 /// use h3ron::H3Cell;
@@ -29,7 +29,7 @@ use std::iter::FromIterator;
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
 /// #    while let Ok(idx) = rdr.read_u64::<LE>() {
-/// #        cells.push(Cell::from_raw(idx).unwrap());
+/// #        cells.push(Cell::from_raw(idx)?);
 /// #    }
 ///
 /// // `cells` is a slice of `Index`s
@@ -40,8 +40,8 @@ use std::iter::FromIterator;
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert!(monaco.contains(Cell::from_raw(*point_1).unwrap()));
-/// assert!(!monaco.contains(Cell::from_raw(*point_2).unwrap()));
+/// assert!(monaco.contains(Cell::from_raw(*point_1)?));
+/// assert!(!monaco.contains(Cell::from_raw(*point_2)?));
 ///
 /// #     Ok(())
 /// # }
