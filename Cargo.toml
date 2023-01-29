@@ -1,6 +1,6 @@
 [package]
 name = "hextree"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
 edition = "2018"
