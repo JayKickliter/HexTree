@@ -29,7 +29,7 @@ thiserror = "1"
 [dev-dependencies]
 byteorder = "1"
 criterion = { version = "0.3", features = ["html_reports"] }
-h3ron = "*"
+h3ron = "0.15.1"
 geo-types = "0.7"
 
 [dev-dependencies.h3-lorawan-regions]
