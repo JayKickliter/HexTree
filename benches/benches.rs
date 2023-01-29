@@ -3,7 +3,8 @@ use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
-use hextree::{compaction::EqCompactor, h3ron::H3Cell, HexTreeMap, HexTreeSet};
+use h3ron::H3Cell;
+use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
 use std::convert::TryFrom;
 
 fn set_lookup(c: &mut Criterion) {
@@ -11,7 +12,7 @@ fn set_lookup(c: &mut Criterion) {
 
     let us915_set: HexTreeSet = PLAIN_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
 
     let tarpon_springs = coord! {x: -82.753822, y: 28.15215};
@@ -19,9 +20,11 @@ fn set_lookup(c: &mut Criterion) {
     let paris = coord! {x: 2.340340, y: 48.868680};
 
     for resolution in [0, 4, 8, 12, 15] {
-        let tarpon_springs = H3Cell::from_coordinate(tarpon_springs, resolution).unwrap();
-        let gulf_of_mexico = H3Cell::from_coordinate(gulf_of_mexico, resolution).unwrap();
-        let paris = H3Cell::from_coordinate(paris, resolution).unwrap();
+        let tarpon_springs =
+            Cell::try_from(*H3Cell::from_coordinate(tarpon_springs, resolution).unwrap()).unwrap();
+        let gulf_of_mexico =
+            Cell::try_from(*H3Cell::from_coordinate(gulf_of_mexico, resolution).unwrap()).unwrap();
+        let paris = Cell::try_from(*H3Cell::from_coordinate(paris, resolution).unwrap()).unwrap();
 
         group.bench_with_input(
             BenchmarkId::new("Tarpon Spring", resolution),
@@ -44,13 +47,13 @@ fn set_lookup(c: &mut Criterion) {
 fn set_construction(c: &mut Criterion) {
     let mut group = c.benchmark_group("US915 HexTreeSet construction");
 
-    let precompacted_us915_cells: Vec<H3Cell> = COMPACT_US915_INDICES
+    let precompacted_us915_cells: Vec<Cell> = COMPACT_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
-    let plain_us915_cells: Vec<H3Cell> = PLAIN_US915_INDICES
+    let plain_us915_cells: Vec<Cell> = PLAIN_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
 
     group.bench_function("pre-compacted", |b| {
@@ -76,7 +79,7 @@ fn map_lookup(c: &mut Criterion) {
     us915_map.extend(
         PLAIN_US915_INDICES
             .iter()
-            .map(|&idx| H3Cell::try_from(idx).unwrap())
+            .map(|&idx| Cell::try_from(idx).unwrap())
             .zip(std::iter::repeat(Region::US915)),
     );
 
@@ -85,9 +88,11 @@ fn map_lookup(c: &mut Criterion) {
     let paris = coord! {x: 2.340340, y: 48.868680};
 
     for resolution in [0, 4, 8, 12, 15] {
-        let tarpon_springs = H3Cell::from_coordinate(tarpon_springs, resolution).unwrap();
-        let gulf_of_mexico = H3Cell::from_coordinate(gulf_of_mexico, resolution).unwrap();
-        let paris = H3Cell::from_coordinate(paris, resolution).unwrap();
+        let tarpon_springs =
+            Cell::try_from(*H3Cell::from_coordinate(tarpon_springs, resolution).unwrap()).unwrap();
+        let gulf_of_mexico =
+            Cell::try_from(*H3Cell::from_coordinate(gulf_of_mexico, resolution).unwrap()).unwrap();
+        let paris = Cell::try_from(*H3Cell::from_coordinate(paris, resolution).unwrap()).unwrap();
 
         group.bench_with_input(
             BenchmarkId::new("Tarpon Spring", resolution),
@@ -118,13 +123,13 @@ fn map_construction(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("US915 HexTreeMap construction");
 
-    let precompacted_us915_cells: Vec<H3Cell> = COMPACT_US915_INDICES
+    let precompacted_us915_cells: Vec<Cell> = COMPACT_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
-    let plain_us915_cells: Vec<H3Cell> = PLAIN_US915_INDICES
+    let plain_us915_cells: Vec<Cell> = PLAIN_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
 
     group.bench_function("pre-compacted", |b| {
@@ -159,13 +164,13 @@ fn map_iteration(c: &mut Criterion) {
 
     let map_precompacted: HexTreeMap<u32> = COMPACT_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .zip((0..).into_iter())
         .collect();
 
     group.bench_function("collect to vec", |b| {
         b.iter(|| {
-            let out: Vec<(&H3Cell, &u32)> = map_precompacted.iter().collect();
+            let out: Vec<(&Cell, &u32)> = map_precompacted.iter().collect();
             out
         })
     });
@@ -178,12 +183,12 @@ fn set_iteration(c: &mut Criterion) {
 
     let set_precompacted: HexTreeSet = COMPACT_US915_INDICES
         .iter()
-        .map(|&idx| H3Cell::try_from(idx).unwrap())
+        .map(|&idx| Cell::try_from(idx).unwrap())
         .collect();
 
     group.bench_function("collect to vec", |b| {
         b.iter(|| {
-            let out: Vec<H3Cell> = set_precompacted.iter().map(|cv| *cv.0).collect();
+            let out: Vec<Cell> = set_precompacted.iter().map(|cv| *cv.0).collect();
             out
         })
     });

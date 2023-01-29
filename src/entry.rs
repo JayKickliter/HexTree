@@ -1,6 +1,6 @@
 //! `HexTreeMap`'s Entry API.
 
-use crate::{compaction::Compactor, h3ron::H3Cell, HexTreeMap};
+use crate::{compaction::Compactor, Cell, HexTreeMap};
 
 /// A view into a single entry in a map, which may either be vacant or
 /// occupied.
@@ -17,14 +17,14 @@ pub enum Entry<'a, V, C> {
 /// A view into an occupied entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct OccupiedEntry<'a, V> {
-    pub(crate) hex: H3Cell,
+    pub(crate) hex: Cell,
     pub(crate) value: &'a mut V,
 }
 
 /// A view into a vacant entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct VacantEntry<'a, V, C> {
-    pub(crate) hex: H3Cell,
+    pub(crate) hex: Cell,
     pub(crate) map: &'a mut HexTreeMap<V, C>,
 }
 
@@ -38,10 +38,11 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
+    /// # fn main() -> hextree::Result<()> {;
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .and_modify(|v| *v = "Paris")
@@ -52,6 +53,8 @@ where
     ///     .and_modify(|v| *v = "Paris")
     ///     .or_insert("France");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn and_modify<F>(self, f: F) -> Self
     where
@@ -73,14 +76,17 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
+    /// # fn main() -> hextree::Result<()> {;
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .or_insert("Paris");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_insert(self, default: V) -> &'a mut V {
         match self {
@@ -100,14 +106,17 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
+    /// # fn main() -> hextree::Result<()> {;
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map = HexTreeMap::new();
-    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
     ///    .or_insert_with(|| "Paris");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_insert_with<F>(self, default: F) -> &'a mut V
     where
@@ -136,13 +145,16 @@ where
     /// # Examples
     ///
     /// ```
-    /// use hextree::{h3ron::{H3Cell, Index}, HexTreeMap};
+    /// # fn main() -> hextree::Result<()> {
+    /// use hextree::{Cell, HexTreeMap};
     ///
     /// let mut map: HexTreeMap<Option<&str>> = HexTreeMap::new();
-    /// let eiffel_tower_res12 = H3Cell::new(0x8c1fb46741ae9ff);
+    /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12).or_default();
     /// assert_eq!(map[eiffel_tower_res12], None);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn or_default(self) -> &'a mut V {
         match self {

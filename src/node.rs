@@ -1,8 +1,4 @@
-use crate::{
-    compaction::Compactor,
-    digits::Digits,
-    h3ron::{H3Cell, Index},
-};
+use crate::{compaction::Compactor, digits::Digits, Cell};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
@@ -18,12 +14,12 @@ use crate::{
 )]
 #[repr(align(64))]
 pub(crate) enum Node<V> {
-    Parent(H3Cell, [Option<Box<Node<V>>>; 7]),
-    Leaf(H3Cell, V),
+    Parent(Cell, [Option<Box<Node<V>>>; 7]),
+    Leaf(Cell, V),
 }
 
 impl<V> Node<V> {
-    pub(crate) fn new(hex: H3Cell) -> Self {
+    pub(crate) fn new(hex: Cell) -> Self {
         Self::Parent(hex, [None, None, None, None, None, None, None])
     }
 
@@ -36,7 +32,7 @@ impl<V> Node<V> {
 
     pub(crate) fn insert<C>(
         &mut self,
-        hex: H3Cell,
+        hex: Cell,
         res: u8,
         mut digits: Digits,
         value: V,
@@ -46,21 +42,21 @@ impl<V> Node<V> {
     {
         match digits.next() {
             None => {
-                debug_assert_eq!(res, hex.resolution());
+                debug_assert_eq!(res, hex.res());
                 *self = Self::Leaf(hex, value)
             }
             Some(digit) => match self {
                 Self::Leaf(leaf_hex, _) => {
-                    debug_assert_eq!(*leaf_hex, hex.get_parent(res).unwrap());
+                    debug_assert_eq!(*leaf_hex, hex.to_parent(res).unwrap());
                     return;
                 }
                 Self::Parent(parent_hex, children) => {
-                    debug_assert_eq!(parent_hex.resolution(), res);
+                    debug_assert_eq!(parent_hex.res(), res);
                     match children[digit as usize].as_mut() {
                         Some(node) => node.insert(hex, res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new(
-                                hex.get_parent(res + 1)
+                                hex.to_parent(res + 1)
                                     .expect("Digits returned Some, promotion should work"),
                             );
                             node.insert(hex, res + 1, digits, value, compactor);
@@ -78,7 +74,7 @@ impl<V> Node<V> {
         C: Compactor<V>,
     {
         if let Self::Parent(hex, children) = self {
-            debug_assert_eq!(hex.resolution(), res);
+            debug_assert_eq!(hex.res(), res);
             if children
                 .iter()
                 .any(|n| matches!(n.as_ref().map(|n| n.as_ref()), Some(Self::Parent(_, _))))
