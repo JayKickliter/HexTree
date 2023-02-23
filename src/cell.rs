@@ -1,35 +1,57 @@
 use crate::{Error, Result};
 use std::{convert::TryFrom, fmt};
 
-bitfield::bitfield! {
-    /// An H3 index.
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-    #[cfg_attr(
-        feature = "serde-support",
-        derive(serde::Serialize, serde::Deserialize),
-        serde(transparent)
-    )]
-    pub struct Index(u64);
-    pub reserved,       _              : 63;
-    u8; pub mode,       _              : 62, 59;
-    u8; pub mode_dep,   set_mode_dep   : 58, 56;
-    u8; pub resolution, set_resolution : 55, 52;
-    u8; pub base_cell,  set_base_cell  : 51, 45;
-    u8; pub res1digit,  set_res1digit  : 44, 42;
-    u8; pub res2digit,  set_res2digit  : 41, 39;
-    u8; pub res3digit,  set_res3digit  : 38, 36;
-    u8; pub res4digit,  set_res4digit  : 35, 33;
-    u8; pub res5digit,  set_res5digit  : 32, 30;
-    u8; pub res6digit,  set_res6digit  : 29, 27;
-    u8; pub res7digit,  set_res7digit  : 26, 24;
-    u8; pub res8digit,  set_res8digit  : 23, 21;
-    u8; pub res9digit,  set_res9digit  : 20, 18;
-    u8; pub res10digit, set_res10digit : 17, 15;
-    u8; pub res11digit, set_res11digit : 14, 12;
-    u8; pub res12digit, set_res12digit : 11,  9;
-    u8; pub res13digit, set_res13digit :  8,  6;
-    u8; pub res14digit, set_res14digit :  5,  3;
-    u8; pub res15digit, set_res15digit :  2,  0;
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde-support",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
+pub struct Index(u64);
+
+#[allow(dead_code)]
+impl Index {
+    pub const fn reserved(self) -> bool {
+        self.0 >> 0x3F == 1
+    }
+
+    pub const fn mode(self) -> u8 {
+        (self.0 >> 0x3B) as u8 & 0b1111
+    }
+
+    pub const fn mode_dep(self) -> u8 {
+        (self.0 >> 0x38) as u8 & 0b111
+    }
+
+    pub const fn res(self) -> u8 {
+        let res = (self.0 >> 0x34) as u8 & 0b1111;
+        debug_assert!(res < 16);
+        res
+    }
+
+    #[must_use]
+    pub const fn set_res(self, res: u8) -> Self {
+        debug_assert!(res < 16);
+        let mask = 0b1111 << 0x34;
+        let masked_index = self.0 & !mask;
+        let shifted_res = ((res & 0b1111) as u64) << 0x34;
+        Self(masked_index | shifted_res)
+    }
+
+    pub const fn base(self) -> u8 {
+        let base = (self.0 >> 0x2D) as u8 & 0b111_1111;
+        debug_assert!(base < 122);
+        base
+    }
+
+    pub const fn digit(self, res: u8) -> Option<u8> {
+        debug_assert!(res < 16);
+        if res == 0 || res > 15 {
+            None
+        } else {
+            Some(((self.0 >> ((15 - res) * 3)) as u8) & 0b111)
+        }
+    }
 }
 
 /// [HexTreeMap][crate::HexTreeMap]'s key type.
@@ -50,7 +72,7 @@ impl Cell {
     /// an H3 cell (mode 1 H3 index).
     ///
     /// [bit-representation]: https://h3geo.org/docs/core-library/h3Indexing/
-    pub fn from_raw(raw: u64) -> Result<Self> {
+    pub const fn from_raw(raw: u64) -> Result<Self> {
         let idx = Index(raw);
         if
         // reserved must be 0
@@ -58,7 +80,7 @@ impl Cell {
         // we only care about mode 1 (cell) indicies
         idx.mode() == 1 &&
         // there are only 122 base cells
-        idx.base_cell() < 122
+        idx.base() < 122
         {
             Ok(Cell(idx.0))
         } else {
@@ -67,7 +89,7 @@ impl Cell {
     }
 
     /// Returns the raw [u64] H3 index for this cell.
-    pub fn into_raw(self) -> u64 {
+    pub const fn into_raw(self) -> u64 {
         self.0
     }
 
@@ -75,13 +97,13 @@ impl Cell {
     ///
     /// Returns Some if `res` is less-than or equal-to this cell's
     /// resolution, otherwise returns None.
-    pub fn to_parent(&self, res: u8) -> Option<Self> {
+    pub const fn to_parent(&self, res: u8) -> Option<Self> {
         match self.res() {
             v if v < res => None,
             v if v == res => Some(*self),
             _ => {
-                let mut idx = Index(self.0);
-                idx.set_resolution(res);
+                let idx = Index(self.0);
+                let idx = idx.set_res(res);
                 let lower_bits = u64::MAX >> (64 - (15 - res) * 3);
                 let raw = idx.0 | lower_bits;
                 Some(Cell(raw))
@@ -90,15 +112,15 @@ impl Cell {
     }
 
     /// Returns this cell's base (res-0 parent).
-    pub fn base(&self) -> u8 {
-        let base = Index(self.0).base_cell();
+    pub const fn base(&self) -> u8 {
+        let base = Index(self.0).base();
         debug_assert!(base < 122, "valid base indices are [0,122]");
         base
     }
 
     /// Returns this cell's resolution.
-    pub fn res(&self) -> u8 {
-        Index(self.0).resolution()
+    pub const fn res(&self) -> u8 {
+        Index(self.0).res()
     }
 }
 
@@ -142,23 +164,23 @@ mod tests {
         assert!(!idx.reserved());
         assert_eq!(idx.mode(), 1);
         assert_eq!(idx.mode_dep(), 0);
-        assert_eq!(idx.resolution(), 5);
-        assert_eq!(idx.base_cell(), 20);
-        assert_eq!(idx.res1digit(), 0);
-        assert_eq!(idx.res2digit(), 6);
-        assert_eq!(idx.res3digit(), 4);
-        assert_eq!(idx.res4digit(), 3);
-        assert_eq!(idx.res5digit(), 4);
-        assert_eq!(idx.res6digit(), 7);
-        assert_eq!(idx.res7digit(), 7);
-        assert_eq!(idx.res8digit(), 7);
-        assert_eq!(idx.res9digit(), 7);
-        assert_eq!(idx.res10digit(), 7);
-        assert_eq!(idx.res11digit(), 7);
-        assert_eq!(idx.res12digit(), 7);
-        assert_eq!(idx.res13digit(), 7);
-        assert_eq!(idx.res14digit(), 7);
-        assert_eq!(idx.res15digit(), 7);
+        assert_eq!(idx.res(), 5);
+        assert_eq!(idx.base(), 20);
+        assert_eq!(idx.digit(1), Some(0));
+        assert_eq!(idx.digit(2), Some(6));
+        assert_eq!(idx.digit(3), Some(4));
+        assert_eq!(idx.digit(4), Some(3));
+        assert_eq!(idx.digit(5), Some(4));
+        assert_eq!(idx.digit(6), Some(7));
+        assert_eq!(idx.digit(7), Some(7));
+        assert_eq!(idx.digit(8), Some(7));
+        assert_eq!(idx.digit(9), Some(7));
+        assert_eq!(idx.digit(10), Some(7));
+        assert_eq!(idx.digit(11), Some(7));
+        assert_eq!(idx.digit(12), Some(7));
+        assert_eq!(idx.digit(13), Some(7));
+        assert_eq!(idx.digit(14), Some(7));
+        assert_eq!(idx.digit(15), Some(7));
     }
 
     #[test]
@@ -169,14 +191,14 @@ mod tests {
         let parent = cell.to_parent(4).unwrap();
         let parent_idx = Index(parent.0);
         assert_eq!(parent.res(), 4);
-        assert_eq!(parent_idx.res5digit(), 7);
-        assert_eq!(parent_idx.res4digit(), 3);
+        assert_eq!(parent_idx.digit(5), Some(7));
+        assert_eq!(parent_idx.digit(4), Some(3));
         let parent = cell.to_parent(0).unwrap();
         let parent_idx = Index(parent.0);
-        assert_eq!(parent_idx.res4digit(), 7);
-        assert_eq!(parent_idx.res3digit(), 7);
-        assert_eq!(parent_idx.res2digit(), 7);
-        assert_eq!(parent_idx.res1digit(), 7);
-        assert_eq!(parent_idx.base_cell(), 20);
+        assert_eq!(parent_idx.digit(4), Some(7));
+        assert_eq!(parent_idx.digit(3), Some(7));
+        assert_eq!(parent_idx.digit(2), Some(7));
+        assert_eq!(parent_idx.digit(1), Some(7));
+        assert_eq!(parent_idx.base(), 20);
     }
 }

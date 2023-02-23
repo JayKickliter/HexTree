@@ -22,7 +22,6 @@ default = []
 serde-support = ["serde"]
 
 [dependencies]
-bitfield = "0"
 serde = { version = "1", optional = true, features = ["derive"] }
 thiserror = "1"
 
