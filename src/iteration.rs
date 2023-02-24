@@ -34,12 +34,12 @@ impl<'a, V> Iterator for Iter<'a, V> {
         }
         while let Some(curr) = self.curr {
             match curr.as_ref() {
-                Node::Parent(_, children) => {
+                Node::Parent(children) => {
                     let mut iter = children.iter().flatten();
                     self.curr = iter.next();
                     self.stack.push(iter);
                 }
-                Node::Leaf(cell, value) => {
+                Node::Leaf(value) => {
                     self.curr = None;
                     return Some((cell, value));
                 }
@@ -83,12 +83,12 @@ impl<'a, V> Iterator for IterMut<'a, V> {
         }
         while let Some(curr) = self.curr.take() {
             match curr.as_mut() {
-                Node::Parent(_, children) => {
+                Node::Parent(children) => {
                     let mut iter = children.iter_mut().flatten();
                     self.curr = iter.next();
                     self.stack.push(iter);
                 }
-                Node::Leaf(cell, value) => {
+                Node::Leaf(value) => {
                     self.curr = None;
                     return Some((cell, value));
                 }

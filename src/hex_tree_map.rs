@@ -176,12 +176,12 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get(&self, hex: Cell) -> Option<&V> {
+    pub fn get(&self, hex: Cell) -> Option<(Cell, &V)> {
         let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.get(digits)
+                node.get(hex, digits)
             }
             None => None,
         }
