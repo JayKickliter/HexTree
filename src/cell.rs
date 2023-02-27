@@ -9,7 +9,6 @@ use std::{convert::TryFrom, fmt};
 )]
 pub struct Index(u64);
 
-#[allow(dead_code)]
 impl Index {
     pub const fn reserved(self) -> bool {
         self.0 >> 0x3F == 1
@@ -19,6 +18,7 @@ impl Index {
         (self.0 >> 0x3B) as u8 & 0b1111
     }
 
+    #[allow(dead_code)]
     pub const fn mode_dep(self) -> u8 {
         (self.0 >> 0x38) as u8 & 0b111
     }
@@ -44,13 +44,32 @@ impl Index {
         base
     }
 
+    #[must_use]
+    pub const fn set_base(self, base: u8) -> Self {
+        debug_assert!(base < 122);
+        let cleared_of_base = self.0 & !(0b111_1111 << 0x2D);
+        let shifted_base = (base as u64 & 0b111_1111) << 0x2D;
+        Self(cleared_of_base | shifted_base)
+    }
+
     pub const fn digit(self, res: u8) -> Option<u8> {
         debug_assert!(res < 16);
+        debug_assert!(res > 0);
         if res == 0 || res > 15 {
             None
         } else {
             Some(((self.0 >> ((15 - res) * 3)) as u8) & 0b111)
         }
+    }
+
+    #[must_use]
+    pub const fn set_digit(self, res: u8, digit: u8) -> Self {
+        debug_assert!(digit < 8);
+        debug_assert!(res > 0);
+        debug_assert!(res < 16);
+        let cleared_of_digit = self.0 & !(0b111 << ((15 - res) * 3));
+        let shifted_digit = (digit as u64) << ((15 - res) * 3);
+        Self(cleared_of_digit | shifted_digit)
     }
 }
 
@@ -129,6 +148,73 @@ impl TryFrom<u64> for Cell {
 
     fn try_from(raw: u64) -> Result<Cell> {
         Cell::from_raw(raw)
+    }
+}
+
+/// A type for building up Cells in an iterative matter when
+/// tree-walking.
+pub(crate) struct CellStack(Option<Cell>);
+
+impl CellStack {
+    pub fn new() -> Self {
+        Self(None)
+    }
+
+    pub fn cell(&self) -> Option<&Cell> {
+        self.0.as_ref()
+    }
+
+    pub(crate) fn push(&mut self, digit: u8) {
+        match self.0 {
+            None => {
+                let idx = Index(0x8001fffffffffff).set_base(digit);
+                self.0 = Some(Cell(idx.0))
+            }
+            Some(cell) => {
+                let res = cell.res();
+                let idx = Index(cell.0).set_res(res + 1).set_digit(res + 1, digit);
+                self.0 = Some(Cell(idx.0))
+            }
+        }
+    }
+
+    pub fn pop(&mut self) -> Option<u8> {
+        if let Some(cell) = self.0 {
+            let res = cell.res();
+            if res == 0 {
+                let ret = Some(cell.base());
+                self.0 = None;
+                ret
+            } else {
+                let ret = Index(cell.0).digit(res);
+                self.0 = cell.to_parent(res - 1);
+                ret
+            }
+        } else {
+            None
+        }
+    }
+
+    /// If self currency contains a cell, this replaces the digit at
+    /// its current res and returns what was there. If self is empty,
+    /// nothing is replaced and None is returned.
+    pub fn swap(&mut self, digit: u8) -> Option<u8> {
+        let ret;
+        let inner;
+        if let Some(cell) = self.0 {
+            let res = cell.res();
+            if res == 0 {
+                ret = Some(Index(cell.0).base());
+                inner = Some(Cell(Index(cell.0).set_base(digit).0));
+            } else {
+                ret = Index(cell.0).digit(res);
+                inner = Some(Cell(Index(cell.0).set_digit(res, digit).0));
+            }
+        } else {
+            return None;
+        }
+        self.0 = inner;
+        ret
     }
 }
 

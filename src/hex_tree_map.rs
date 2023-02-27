@@ -212,13 +212,13 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order.
-    pub fn iter(&self) -> impl Iterator<Item = (&Cell, &V)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Cell, &V)> {
         crate::iteration::Iter::new(&self.nodes)
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order
     /// with mutable references to the values.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Cell, &mut V)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Cell, &mut V)> {
         crate::iteration::IterMut::new(&mut self.nodes)
     }
 }

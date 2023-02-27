@@ -170,7 +170,7 @@ fn map_iteration(c: &mut Criterion) {
 
     group.bench_function("collect to vec", |b| {
         b.iter(|| {
-            let out: Vec<(&Cell, &u32)> = map_precompacted.iter().collect();
+            let out: Vec<(Cell, &u32)> = map_precompacted.iter().collect();
             out
         })
     });
@@ -188,7 +188,7 @@ fn set_iteration(c: &mut Criterion) {
 
     group.bench_function("collect to vec", |b| {
         b.iter(|| {
-            let out: Vec<Cell> = set_precompacted.iter().map(|cv| *cv.0).collect();
+            let out: Vec<Cell> = set_precompacted.iter().map(|cv| cv.0).collect();
             out
         })
     });
