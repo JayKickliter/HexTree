@@ -1,6 +1,17 @@
+//! This has two different types representing H3 indices is slightly
+//! different ways, [Index] & [Cell]. Index is lower level and allows
+//! you create invalid H3 indices. Cell is higher level and enforces
+//! invariants.
+
 use crate::{Error, Result};
 use std::{convert::TryFrom, fmt};
 
+/// A low-level type for H3 [index manipulation].
+///
+/// Node that all setters take consume `self` and return a new
+/// `Index`.
+///
+/// [index manipulation]: https://observablehq.com/@nrabinowitz/h3-index-bit-layout?collection=@nrabinowitz/h3
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde-support",
@@ -10,25 +21,47 @@ use std::{convert::TryFrom, fmt};
 pub struct Index(u64);
 
 impl Index {
+    /// Returns this index's reserved bit.
+    ///
+    /// Must always be 0 to remain valid.
     pub const fn reserved(self) -> bool {
         self.0 >> 0x3F == 1
     }
 
+    /// Returns this index's mode.
+    ///
+    /// 0 - is reserved and indicates an invalid H3 index.
+    /// 1 - is an H3 Cell (Hexagon/Pentagon) index.
+    /// 2 - is an H3 Directed Edge (Cell A -> Cell B) index.
+    /// 3 - is planned to be a bidirectional edge (Cell A <-> Cell B).
+    /// 4 - is an H3 Vertex (i.e. a single vertex of an H3 Cell).
     pub const fn mode(self) -> u8 {
         (self.0 >> 0x3B) as u8 & 0b1111
     }
 
+    /// Returns the mode-dependent bits.
+    ///
+    /// Interpretation of this value depends on the mode bits' value.
     #[allow(dead_code)]
     pub const fn mode_dep(self) -> u8 {
         (self.0 >> 0x38) as u8 & 0b111
     }
 
+    /// Returns this index's resolution.
+    ///
+    /// All values are valid, with 0 the coarsest resolution and 15
+    /// the finest.
     pub const fn res(self) -> u8 {
         let res = (self.0 >> 0x34) as u8 & 0b1111;
         debug_assert!(res < 16);
         res
     }
 
+    /// Consumes `self` and returns a new Index with its resolution
+    /// bits set to `res`.
+    ///
+    /// This function does not check `res` for validity, and any value
+    /// for res over 15 is masked to 4 bits.
     #[must_use]
     pub const fn set_res(self, res: u8) -> Self {
         debug_assert!(res < 16);
@@ -38,12 +71,20 @@ impl Index {
         Self(masked_index | shifted_res)
     }
 
+    /// Returns this index's base, or resolution cell.
+    ///
+    /// There are 122 valid H3 base cells, in [0,122).
     pub const fn base(self) -> u8 {
         let base = (self.0 >> 0x2D) as u8 & 0b111_1111;
         debug_assert!(base < 122);
         base
     }
 
+    /// Consumes `self` and returns a new Index with its base bits to
+    /// `base`.
+    ///
+    /// This function does not check `base` for validity, and
+    /// providing any value >121 will return an invalid index.
     #[must_use]
     pub const fn set_base(self, base: u8) -> Self {
         debug_assert!(base < 122);
@@ -52,6 +93,7 @@ impl Index {
         Self(cleared_of_base | shifted_base)
     }
 
+    /// Returns the 3 bit digit value at the provided `res`.
     pub const fn digit(self, res: u8) -> Option<u8> {
         debug_assert!(res < 16);
         debug_assert!(res > 0);
@@ -62,6 +104,11 @@ impl Index {
         }
     }
 
+    /// Consumes `self` and returns a new Index with it's resolution
+    /// `res` digit set to `digit`.
+    ///
+    /// This function does not check `res` nor `digit` for validity
+    /// and can panic or return an invalid index.
     #[must_use]
     pub const fn set_digit(self, res: u8, digit: u8) -> Self {
         debug_assert!(digit < 8);
