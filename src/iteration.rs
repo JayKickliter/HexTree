@@ -70,8 +70,7 @@ impl<'a, V> Iterator for Iter<'a, V> {
         while let Some((digit, curr)) = self.curr {
             self.cell_stack.swap(digit as u8);
             match curr.as_ref() {
-                Node::Parent(cell, children) => {
-                    debug_assert_eq!(self.cell_stack.cell().expect("corrupted cell-stack"), cell);
+                Node::Parent(children) => {
                     let mut iter = make_node_stack_iter(children.as_ref());
                     self.curr = iter.next();
                     // This branch is not 100% necessary, but I prefer
@@ -83,8 +82,7 @@ impl<'a, V> Iterator for Iter<'a, V> {
                     }
                     self.stack.push(iter);
                 }
-                Node::Leaf(cell, value) => {
-                    debug_assert_eq!(self.cell_stack.cell().expect("corrupted cell-stack"), cell);
+                Node::Leaf(value) => {
                     self.curr = None;
                     return Some((
                         *self.cell_stack.cell().expect("corrupted cell-stack"),
@@ -173,8 +171,7 @@ impl<'a, V> Iterator for IterMut<'a, V> {
         while let Some((digit, curr)) = self.curr.take() {
             self.cell_stack.swap(digit as u8);
             match curr.as_mut() {
-                Node::Parent(cell, children) => {
-                    debug_assert_eq!(self.cell_stack.cell().expect("corrupted cell-stack"), cell);
+                Node::Parent(children) => {
                     let mut iter = make_node_stack_iter_mut(children.as_mut());
                     self.curr = iter.next();
                     // This branch is not 100% necessary, but I prefer
@@ -186,8 +183,7 @@ impl<'a, V> Iterator for IterMut<'a, V> {
                     }
                     self.stack.push(iter);
                 }
-                Node::Leaf(cell, value) => {
-                    debug_assert_eq!(self.cell_stack.cell().expect("corrupted cell-stack"), cell);
+                Node::Leaf(value) => {
                     self.curr = None;
                     return Some((
                         *self.cell_stack.cell().expect("corrupted cell-stack"),
@@ -204,38 +200,45 @@ impl<'a, V> Iterator for IterMut<'a, V> {
 mod tests {
     use crate::{Cell, HexTreeMap};
     use byteorder::{LittleEndian as LE, ReadBytesExt};
+    use h3_lorawan_regions::compact::US915 as COMPACT_US915_INDICES;
     use std::convert::TryFrom;
 
     #[test]
-    fn test_kv_iter() {
-        let idx_bytes = include_bytes!("../assets/monaco.res12.h3idx");
-        let rdr = &mut idx_bytes.as_slice();
-
-        let cell_value_pairs = {
-            let mut cell_value_pairs: Vec<(Cell, i32)> = Vec::new();
-            let mut count = 0;
-            while let Ok(idx) = rdr.read_u64::<LE>() {
-                cell_value_pairs.push((Cell::try_from(idx).unwrap(), count));
-                count += 1;
-            }
-            cell_value_pairs
-        };
-
-        let map = {
+    fn test_kv_iter_derives_key_cells() {
+        // Create a map where the key==value
+        let hexmap = {
             let mut map = HexTreeMap::new();
-            for (cell, value) in cell_value_pairs.iter() {
-                map.insert(*cell, *value);
+            for cell in COMPACT_US915_INDICES
+                .iter()
+                .map(|&idx| Cell::try_from(idx).unwrap())
+            {
+                map.insert(cell, cell);
             }
             map
         };
+        // Assert that the cell keys derived while iterating the tree,
+        // and returned by `next()`, are the same as those we called
+        // `insert` with.
+        assert!(hexmap.iter().all(|(k, v)| k == *v));
+    }
 
-        let map_collected = {
-            let mut map_collected: Vec<(Cell, i32)> = map.iter().map(|(c, v)| (c, *v)).collect();
-            map_collected.sort_by(|a, b| a.1.cmp(&b.1));
-            map_collected
+    #[test]
+    fn test_kv_iter_mut_derives_key_cells() {
+        // Create a map where the key==value
+        let mut hexmap = {
+            let mut map = HexTreeMap::new();
+            for cell in COMPACT_US915_INDICES
+                .iter()
+                .map(|&idx| Cell::try_from(idx).unwrap())
+            {
+                map.insert(cell, cell);
+            }
+            map
         };
-
-        assert_eq!(cell_value_pairs, map_collected);
+        // Assert that the cell keys derived while iterating the tree,
+        // and returned by `next()`, are the same as those we called
+        // `insert` with.
+        assert!(hexmap.iter_mut().all(|(k, v)| k == *v));
     }
 
     #[test]
