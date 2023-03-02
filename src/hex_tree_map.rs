@@ -97,10 +97,10 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
         let base_cell = hex.base();
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
             None => {
                 let mut node = Box::new(Node::new());
-                node.insert(hex, 0_u8, digits, value, &mut self.compactor);
+                node.insert(0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }

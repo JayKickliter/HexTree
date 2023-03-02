@@ -1,4 +1,4 @@
-use crate::{compaction::Compactor, digits::Digits, Cell};
+use crate::{compaction::Compactor, digits::Digits};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
@@ -30,14 +30,8 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn insert<C>(
-        &mut self,
-        hex: Cell,
-        res: u8,
-        mut digits: Digits,
-        value: V,
-        compactor: &mut C,
-    ) where
+    pub(crate) fn insert<C>(&mut self, res: u8, mut digits: Digits, value: V, compactor: &mut C)
+    where
         C: Compactor<V>,
     {
         match digits.next() {
@@ -48,10 +42,10 @@ impl<V> Node<V> {
                 }
                 Self::Parent(children) => {
                     match children[digit as usize].as_mut() {
-                        Some(node) => node.insert(hex, res + 1, digits, value, compactor),
+                        Some(node) => node.insert(res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new();
-                            node.insert(hex, res + 1, digits, value, compactor);
+                            node.insert(res + 1, digits, value, compactor);
                             children[digit as usize] = Some(Box::new(node));
                         }
                     };
