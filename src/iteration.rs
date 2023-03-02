@@ -1,11 +1,10 @@
 use crate::{cell::CellStack, node::Node, Cell};
-use std::iter::{Enumerate, Flatten, Map};
+use std::iter::{Enumerate, FlatMap};
 
-type NodeStackIter<'a, V> = Flatten<
-    Map<
-        Enumerate<std::slice::Iter<'a, Option<Box<Node<V>>>>>,
-        fn((usize, &'a Option<Box<Node<V>>>)) -> Option<(usize, &'a Box<Node<V>>)>,
-    >,
+type NodeStackIter<'a, V> = FlatMap<
+    Enumerate<std::slice::Iter<'a, Option<Box<Node<V>>>>>,
+    Option<(usize, &'a Box<Node<V>>)>,
+    fn((usize, &'a Option<Box<Node<V>>>)) -> Option<(usize, &'a Box<Node<V>>)>,
 >;
 
 fn make_node_stack_iter<'a, V>(nodes: &'a [Option<Box<Node<V>>>]) -> NodeStackIter<'a, V> {
@@ -18,12 +17,10 @@ fn make_node_stack_iter<'a, V>(nodes: &'a [Option<Box<Node<V>>>]) -> NodeStackIt
         }
     }
 
-    #[allow(clippy::map_flatten)]
     nodes
         .iter()
         .enumerate()
-        .map(map_fn as fn((_, &'a Option<Box<Node<V>>>)) -> Option<(_, &'a Box<Node<V>>)>)
-        .flatten()
+        .flat_map(map_fn as fn((_, &'a Option<Box<Node<V>>>)) -> Option<(_, &'a Box<Node<V>>)>)
 }
 
 pub(crate) struct Iter<'a, V> {
@@ -95,11 +92,10 @@ impl<'a, V> Iterator for Iter<'a, V> {
     }
 }
 
-type NodeStackIterMut<'a, V> = Flatten<
-    Map<
-        Enumerate<std::slice::IterMut<'a, Option<Box<Node<V>>>>>,
-        fn((usize, &'a mut Option<Box<Node<V>>>)) -> Option<(usize, &'a mut Box<Node<V>>)>,
-    >,
+type NodeStackIterMut<'a, V> = FlatMap<
+    Enumerate<std::slice::IterMut<'a, Option<Box<Node<V>>>>>,
+    Option<(usize, &'a mut Box<Node<V>>)>,
+    fn((usize, &'a mut Option<Box<Node<V>>>)) -> Option<(usize, &'a mut Box<Node<V>>)>,
 >;
 
 fn make_node_stack_iter_mut<'a, V>(
@@ -116,15 +112,9 @@ fn make_node_stack_iter_mut<'a, V>(
         }
     }
 
-    #[allow(clippy::map_flatten)]
-    nodes
-        .iter_mut()
-        .enumerate()
-        .map(
-            map_fn_mut
-                as fn((_, &'a mut Option<Box<Node<V>>>)) -> Option<(_, &'a mut Box<Node<V>>)>,
-        )
-        .flatten()
+    nodes.iter_mut().enumerate().flat_map(
+        map_fn_mut as fn((_, &'a mut Option<Box<Node<V>>>)) -> Option<(_, &'a mut Box<Node<V>>)>,
+    )
 }
 
 pub(crate) struct IterMut<'a, V> {
