@@ -24,7 +24,6 @@ fn make_node_stack_iter<'a, V>(nodes: &'a [Option<Box<Node<V>>>]) -> NodeStackIt
 
 pub(crate) struct Iter<'a, V> {
     stack: Vec<NodeStackIter<'a, V>>,
-    #[allow(clippy::borrowed_box)]
     curr: Option<(usize, &'a Node<V>)>,
     cell_stack: CellStack,
 }
@@ -115,7 +114,6 @@ fn make_node_stack_iter_mut<'a, V>(
 
 pub(crate) struct IterMut<'a, V> {
     stack: Vec<NodeStackIterMut<'a, V>>,
-    #[allow(clippy::borrowed_box)]
     curr: Option<(usize, &'a mut Node<V>)>,
     cell_stack: CellStack,
 }
