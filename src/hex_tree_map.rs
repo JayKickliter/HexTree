@@ -97,12 +97,10 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
         let base_cell = hex.base();
         let digits = Digits::new(hex);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
             None => {
-                let mut node = Box::new(Node::new(
-                    hex.to_parent(0).expect("any hex can be promoted to res 0"),
-                ));
-                node.insert(hex, 0_u8, digits, value, &mut self.compactor);
+                let mut node = Box::new(Node::new());
+                node.insert(0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -212,13 +210,13 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order.
-    pub fn iter(&self) -> impl Iterator<Item = (&Cell, &V)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Cell, &V)> {
         crate::iteration::Iter::new(&self.nodes)
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order
     /// with mutable references to the values.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Cell, &mut V)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Cell, &mut V)> {
         crate::iteration::IterMut::new(&mut self.nodes)
     }
 }
