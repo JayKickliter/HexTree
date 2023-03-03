@@ -3,13 +3,12 @@ use std::iter::{Enumerate, FlatMap};
 
 type NodeStackIter<'a, V> = FlatMap<
     Enumerate<std::slice::Iter<'a, Option<Box<Node<V>>>>>,
-    Option<(usize, &'a Box<Node<V>>)>,
-    fn((usize, &'a Option<Box<Node<V>>>)) -> Option<(usize, &'a Box<Node<V>>)>,
+    Option<(usize, &'a Node<V>)>,
+    fn((usize, &'a Option<Box<Node<V>>>)) -> Option<(usize, &'a Node<V>)>,
 >;
 
 fn make_node_stack_iter<'a, V>(nodes: &'a [Option<Box<Node<V>>>]) -> NodeStackIter<'a, V> {
-    #[allow(clippy::borrowed_box)]
-    fn map_fn<V>(item: (usize, &Option<Box<Node<V>>>)) -> Option<(usize, &Box<Node<V>>)> {
+    fn map_fn<V>(item: (usize, &Option<Box<Node<V>>>)) -> Option<(usize, &Node<V>)> {
         if let (digit, Some(val)) = item {
             Some((digit, val))
         } else {
@@ -20,13 +19,13 @@ fn make_node_stack_iter<'a, V>(nodes: &'a [Option<Box<Node<V>>>]) -> NodeStackIt
     nodes
         .iter()
         .enumerate()
-        .flat_map(map_fn as fn((_, &'a Option<Box<Node<V>>>)) -> Option<(_, &'a Box<Node<V>>)>)
+        .flat_map(map_fn as fn((_, &'a Option<Box<Node<V>>>)) -> Option<(_, &'a Node<V>)>)
 }
 
 pub(crate) struct Iter<'a, V> {
     stack: Vec<NodeStackIter<'a, V>>,
     #[allow(clippy::borrowed_box)]
-    curr: Option<(usize, &'a Box<Node<V>>)>,
+    curr: Option<(usize, &'a Node<V>)>,
     cell_stack: CellStack,
 }
 
@@ -66,7 +65,7 @@ impl<'a, V> Iterator for Iter<'a, V> {
         }
         while let Some((digit, curr)) = self.curr {
             self.cell_stack.swap(digit as u8);
-            match curr.as_ref() {
+            match curr {
                 Node::Parent(children) => {
                     let mut iter = make_node_stack_iter(children.as_ref());
                     self.curr = iter.next();
@@ -94,17 +93,14 @@ impl<'a, V> Iterator for Iter<'a, V> {
 
 type NodeStackIterMut<'a, V> = FlatMap<
     Enumerate<std::slice::IterMut<'a, Option<Box<Node<V>>>>>,
-    Option<(usize, &'a mut Box<Node<V>>)>,
-    fn((usize, &'a mut Option<Box<Node<V>>>)) -> Option<(usize, &'a mut Box<Node<V>>)>,
+    Option<(usize, &'a mut Node<V>)>,
+    fn((usize, &'a mut Option<Box<Node<V>>>)) -> Option<(usize, &'a mut Node<V>)>,
 >;
 
 fn make_node_stack_iter_mut<'a, V>(
     nodes: &'a mut [Option<Box<Node<V>>>],
 ) -> NodeStackIterMut<'a, V> {
-    #[allow(clippy::borrowed_box)]
-    fn map_fn_mut<V>(
-        item: (usize, &mut Option<Box<Node<V>>>),
-    ) -> Option<(usize, &mut Box<Node<V>>)> {
+    fn map_fn_mut<V>(item: (usize, &mut Option<Box<Node<V>>>)) -> Option<(usize, &mut Node<V>)> {
         if let (digit, Some(val)) = item {
             Some((digit, val))
         } else {
@@ -113,14 +109,14 @@ fn make_node_stack_iter_mut<'a, V>(
     }
 
     nodes.iter_mut().enumerate().flat_map(
-        map_fn_mut as fn((_, &'a mut Option<Box<Node<V>>>)) -> Option<(_, &'a mut Box<Node<V>>)>,
+        map_fn_mut as fn((_, &'a mut Option<Box<Node<V>>>)) -> Option<(_, &'a mut Node<V>)>,
     )
 }
 
 pub(crate) struct IterMut<'a, V> {
     stack: Vec<NodeStackIterMut<'a, V>>,
     #[allow(clippy::borrowed_box)]
-    curr: Option<(usize, &'a mut Box<Node<V>>)>,
+    curr: Option<(usize, &'a mut Node<V>)>,
     cell_stack: CellStack,
 }
 
@@ -160,7 +156,7 @@ impl<'a, V> Iterator for IterMut<'a, V> {
         }
         while let Some((digit, curr)) = self.curr.take() {
             self.cell_stack.swap(digit as u8);
-            match curr.as_mut() {
+            match curr {
                 Node::Parent(children) => {
                     let mut iter = make_node_stack_iter_mut(children.as_mut());
                     self.curr = iter.next();
