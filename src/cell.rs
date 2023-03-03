@@ -24,6 +24,7 @@ impl Index {
     /// Returns this index's reserved bit.
     ///
     /// Must always be 0 to remain valid.
+    #[inline]
     pub const fn reserved(self) -> bool {
         self.0 >> 0x3F == 1
     }
@@ -35,6 +36,7 @@ impl Index {
     /// 2 - is an H3 Directed Edge (Cell A -> Cell B) index.
     /// 3 - is planned to be a bidirectional edge (Cell A <-> Cell B).
     /// 4 - is an H3 Vertex (i.e. a single vertex of an H3 Cell).
+    #[inline]
     pub const fn mode(self) -> u8 {
         (self.0 >> 0x3B) as u8 & 0b1111
     }
@@ -43,6 +45,7 @@ impl Index {
     ///
     /// Interpretation of this value depends on the mode bits' value.
     #[allow(dead_code)]
+    #[inline]
     pub const fn mode_dep(self) -> u8 {
         (self.0 >> 0x38) as u8 & 0b111
     }
@@ -51,6 +54,7 @@ impl Index {
     ///
     /// All values are valid, with 0 the coarsest resolution and 15
     /// the finest.
+    #[inline]
     pub const fn res(self) -> u8 {
         let res = (self.0 >> 0x34) as u8 & 0b1111;
         debug_assert!(res < 16);
@@ -63,6 +67,7 @@ impl Index {
     /// This function does not check `res` for validity, and any value
     /// for res over 15 is masked to 4 bits.
     #[must_use]
+    #[inline]
     pub const fn set_res(self, res: u8) -> Self {
         debug_assert!(res < 16);
         let mask = 0b1111 << 0x34;
@@ -74,6 +79,7 @@ impl Index {
     /// Returns this index's base, or resolution cell.
     ///
     /// There are 122 valid H3 base cells, in [0,122).
+    #[inline]
     pub const fn base(self) -> u8 {
         let base = (self.0 >> 0x2D) as u8 & 0b111_1111;
         debug_assert!(base < 122);
@@ -86,6 +92,7 @@ impl Index {
     /// This function does not check `base` for validity, and
     /// providing any value >121 will return an invalid index.
     #[must_use]
+    #[inline]
     pub const fn set_base(self, base: u8) -> Self {
         debug_assert!(base < 122);
         let cleared_of_base = self.0 & !(0b111_1111 << 0x2D);
@@ -94,6 +101,7 @@ impl Index {
     }
 
     /// Returns the 3 bit digit value at the provided `res`.
+    #[inline]
     pub const fn digit(self, res: u8) -> Option<u8> {
         debug_assert!(res < 16);
         debug_assert!(res > 0);
@@ -110,6 +118,7 @@ impl Index {
     /// This function does not check `res` nor `digit` for validity
     /// and can panic or return an invalid index.
     #[must_use]
+    #[inline]
     pub const fn set_digit(self, res: u8, digit: u8) -> Self {
         debug_assert!(digit < 8);
         debug_assert!(res > 0);
@@ -138,6 +147,7 @@ impl Cell {
     /// an H3 cell (mode 1 H3 index).
     ///
     /// [bit-representation]: https://h3geo.org/docs/core-library/h3Indexing/
+    #[inline]
     pub const fn from_raw(raw: u64) -> Result<Self> {
         let idx = Index(raw);
         if
@@ -155,6 +165,7 @@ impl Cell {
     }
 
     /// Returns the raw [u64] H3 index for this cell.
+    #[inline]
     pub const fn into_raw(self) -> u64 {
         self.0
     }
@@ -163,6 +174,7 @@ impl Cell {
     ///
     /// Returns Some if `res` is less-than or equal-to this cell's
     /// resolution, otherwise returns None.
+    #[inline]
     pub const fn to_parent(&self, res: u8) -> Option<Self> {
         match self.res() {
             v if v < res => None,
@@ -178,6 +190,7 @@ impl Cell {
     }
 
     /// Returns this cell's base (res-0 parent).
+    #[inline]
     pub const fn base(&self) -> u8 {
         let base = Index(self.0).base();
         debug_assert!(base < 122, "valid base indices are [0,122]");
@@ -185,6 +198,7 @@ impl Cell {
     }
 
     /// Returns this cell's resolution.
+    #[inline]
     pub const fn res(&self) -> u8 {
         Index(self.0).res()
     }
