@@ -80,9 +80,13 @@ fn mono_map() {
     }
 
     for (name, cells) in regions.iter() {
-        assert!(cells
-            .iter()
-            .all(|c| monomap.get(Cell::try_from(*c).unwrap()) == Some(&name)));
+        assert!(cells.iter().map(|c| Cell::try_from(*c).unwrap()).all(|c| {
+            if let Some((cell, val)) = monomap.get(c) {
+                c.to_parent(cell.res()) == Some(cell) && val == &name
+            } else {
+                false
+            }
+        }));
     }
 }
 

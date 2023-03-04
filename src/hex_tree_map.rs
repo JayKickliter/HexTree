@@ -57,7 +57,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
 /// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
 ///
-/// assert_eq!(monaco.get(Cell::from_raw(*point_1)?), Some(&Region::Monaco));
+/// assert_eq!(monaco.get(Cell::from_raw(*point_1)?).unzip().1, Some(&Region::Monaco));
 /// assert_eq!(monaco.get(Cell::from_raw(*point_2)?), None);
 ///
 /// #     Ok(())
@@ -174,12 +174,12 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get(&self, hex: Cell) -> Option<&V> {
+    pub fn get(&self, hex: Cell) -> Option<(Cell, &V)> {
         let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.get(digits)
+                node.get(0, hex, digits)
             }
             None => None,
         }
@@ -187,12 +187,12 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns a reference to the value corresponding to the given
     /// hex or one of its parents.
-    pub fn get_mut(&mut self, hex: Cell) -> Option<&mut V> {
+    pub fn get_mut(&mut self, hex: Cell) -> Option<(Cell, &mut V)> {
         let base_cell = hex.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
                 let digits = Digits::new(hex);
-                node.get_mut(digits)
+                node.get_mut(0, hex, digits)
             }
             None => None,
         }
@@ -205,7 +205,7 @@ impl<V, C> HexTreeMap<V, C> {
         }
         Entry::Occupied(OccupiedEntry {
             hex,
-            value: self.get_mut(hex).unwrap(),
+            cell_value: self.get_mut(hex).unwrap(),
         })
     }
 
@@ -294,7 +294,7 @@ impl<V, C> std::ops::Index<Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: Cell) -> &V {
-        self.get(cell).expect("no entry found for cell")
+        self.get(cell).expect("no entry found for cell").1
     }
 }
 
@@ -323,7 +323,7 @@ impl<V, C> std::ops::Index<&Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: &Cell) -> &V {
-        self.get(*cell).expect("no entry found for cell")
+        self.get(*cell).expect("no entry found for cell").1
     }
 }
 
@@ -353,7 +353,7 @@ impl<V, C> std::ops::IndexMut<Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: Cell) -> &mut V {
-        self.get_mut(cell).expect("no entry found for cell")
+        self.get_mut(cell).expect("no entry found for cell").1
     }
 }
 
@@ -383,7 +383,7 @@ impl<V, C> std::ops::IndexMut<&Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: &Cell) -> &mut V {
-        self.get_mut(*cell).expect("no entry found for cell")
+        self.get_mut(*cell).expect("no entry found for cell").1
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{compaction::Compactor, digits::Digits};
+use crate::{compaction::Compactor, digits::Digits, Cell};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
@@ -100,15 +100,14 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn get(&self, mut digits: Digits) -> Option<&V> {
-        if let Self::Leaf(val) = self {
-            return Some(val);
-        }
-
+    pub(crate) fn get(&self, res: u8, cell: Cell, mut digits: Digits) -> Option<(Cell, &V)> {
         match (digits.next(), self) {
-            (_, Self::Leaf(_)) => unreachable!(),
+            (None, Self::Leaf(val)) => Some((cell, val)),
+            (Some(_), Self::Leaf(val)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), val))
+            }
             (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
-                Some(node) => node.get(digits),
+                Some(node) => node.get(res + 1, cell, digits),
                 None => None,
             },
             // No digits left, but `self` isn't full, so this hex
@@ -117,15 +116,20 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn get_mut(&mut self, mut digits: Digits) -> Option<&mut V> {
-        if let Self::Leaf(val) = self {
-            return Some(val);
-        }
+    pub(crate) fn get_mut(
+        &mut self,
+        res: u8,
+        cell: Cell,
+        mut digits: Digits,
+    ) -> Option<(Cell, &mut V)> {
         match (digits.next(), self) {
-            (_, Self::Leaf(_)) => unreachable!(),
+            (None, Self::Leaf(val)) => Some((cell, val)),
+            (Some(_), Self::Leaf(val)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), val))
+            }
             (Some(digit), Self::Parent(children)) => {
                 match &mut children.as_mut_slice()[digit as usize] {
-                    Some(node) => node.get_mut(digits),
+                    Some(node) => node.get_mut(res + 1, cell, digits),
                     None => None,
                 }
             }
