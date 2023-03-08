@@ -30,8 +30,14 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn insert<C>(&mut self, res: u8, mut digits: Digits, value: V, compactor: &mut C)
-    where
+    pub(crate) fn insert<C>(
+        &mut self,
+        cell: Cell,
+        res: u8,
+        mut digits: Digits,
+        value: V,
+        compactor: &mut C,
+    ) where
         C: Compactor<V>,
     {
         match digits.next() {
@@ -42,20 +48,20 @@ impl<V> Node<V> {
                 }
                 Self::Parent(children) => {
                     match children[digit as usize].as_mut() {
-                        Some(node) => node.insert(res + 1, digits, value, compactor),
+                        Some(node) => node.insert(cell, res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new();
-                            node.insert(res + 1, digits, value, compactor);
+                            node.insert(cell, res + 1, digits, value, compactor);
                             children[digit as usize] = Some(Box::new(node));
                         }
                     };
                 }
             },
         };
-        self.coalesce(res, compactor);
+        self.coalesce(cell.to_parent(res).unwrap(), compactor);
     }
 
-    pub(crate) fn coalesce<C>(&mut self, res: u8, compactor: &mut C)
+    pub(crate) fn coalesce<C>(&mut self, cell: Cell, compactor: &mut C)
     where
         C: Compactor<V>,
     {
@@ -70,7 +76,7 @@ impl<V> Node<V> {
             for (v, n) in arr.iter_mut().zip(children.iter()) {
                 *v = n.as_ref().map(|n| n.as_ref()).and_then(Node::value);
             }
-            if let Some(value) = compactor.compact(res, arr) {
+            if let Some(value) = compactor.compact(cell, arr) {
                 *self = Self::Leaf(value)
             }
         };
