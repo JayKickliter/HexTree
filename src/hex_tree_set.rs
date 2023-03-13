@@ -16,15 +16,11 @@ use std::iter::FromIterator;
 /// Let's create a HexTreeSet for Monaco as visualized in the map
 ///
 /// ```
-/// # use h3ron::Error;
-/// #
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use geo_types::coord;
 /// use hextree::{Cell, HexTreeSet};
-/// use h3ron::H3Cell;
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
-/// #    use h3ron::{Index as H3Index, FromH3Index};
 /// #    let idx_bytes = include_bytes!("../assets//monaco.res12.h3idx");
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
@@ -37,11 +33,13 @@ use std::iter::FromIterator;
 ///
 /// // You can see in the map above that our set covers Point 1 (green
 /// // check) but not Point 2 (red x), let's test that.
-/// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
-/// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
+/// // Lat/lon 43.73631, 7.42418 @ res 12
+/// let point_1 = Cell::from_raw(0x8c3969a41da15ff)?;
+/// // Lat/lon 43.73008, 7.42855 @ res 12
+/// let point_2 = Cell::from_raw(0x8c3969a415065ff)?;
 ///
-/// assert!(monaco.contains(Cell::from_raw(*point_1)?));
-/// assert!(!monaco.contains(Cell::from_raw(*point_2)?));
+/// assert!(monaco.contains(point_1));
+/// assert!(!monaco.contains(point_2));
 ///
 /// #     Ok(())
 /// # }

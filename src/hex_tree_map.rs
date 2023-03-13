@@ -24,15 +24,10 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// Let's create a HexTreeMap for Monaco as visualized in the map
 ///
 /// ```
-/// # use h3ron::Error;
-/// #
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use geo_types::coord;
 /// use hextree::{Cell, compaction::EqCompactor, HexTreeMap};
-/// use h3ron::H3Cell;
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
-/// #    use h3ron::{Index, FromH3Index};
 /// #    let idx_bytes = include_bytes!("../assets//monaco.res12.h3idx");
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
@@ -54,11 +49,13 @@ use std::{cmp::PartialEq, iter::FromIterator};
 ///
 /// // You can see in the map above that our set covers Point 1 (green
 /// // check) but not Point 2 (red x), let's test that.
-/// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
-/// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
+/// // Lat/lon 43.73631, 7.42418 @ res 12
+/// let point_1 = Cell::from_raw(0x8c3969a41da15ff)?;
+/// // Lat/lon 43.73008, 7.42855 @ res 12
+/// let point_2 = Cell::from_raw(0x8c3969a415065ff)?;
 ///
-/// assert_eq!(monaco.get(Cell::from_raw(*point_1)?).unzip().1, Some(&Region::Monaco));
-/// assert_eq!(monaco.get(Cell::from_raw(*point_2)?), None);
+/// assert_eq!(monaco.get(point_1).unzip().1, Some(&Region::Monaco));
+/// assert_eq!(monaco.get(point_2).unzip().1, None);
 ///
 /// #     Ok(())
 /// # }
@@ -173,7 +170,10 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// Returns a reference to the value corresponding to the given
-    /// cell or one of its parents.
+    /// target cell or one of its parents.
+    ///
+    /// Note that this method also returns a Cell, which may be a
+    /// parent of the target hex provided.
     pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
@@ -185,8 +185,11 @@ impl<V, C> HexTreeMap<V, C> {
         }
     }
 
-    /// Returns a reference to the value corresponding to the given
-    /// cell or one of its parents.
+    /// Returns a mutable reference to the value corresponding to the
+    /// given target cell or one of its parents.
+    ///
+    /// Note that this method also returns a Cell, which may be a
+    /// parent of the target hex provided.
     pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
