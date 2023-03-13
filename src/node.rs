@@ -5,7 +5,7 @@ use crate::{compaction::Compactor, digits::Digits, Cell};
 // node. That said, storing the index doesn't impose much lookup
 // overhead.
 //
-// The benefit of storing indices is vastly simpler Hex+Value
+// The benefit of storing indices is vastly simpler Cell+Value
 // iteration of a tree.
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -100,7 +100,7 @@ impl<V> Node<V> {
                     None => false,
                 }
             }
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => false,
         }
@@ -116,7 +116,7 @@ impl<V> Node<V> {
                 Some(node) => node.get(res + 1, cell, digits),
                 None => None,
             },
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => None,
         }
@@ -139,7 +139,7 @@ impl<V> Node<V> {
                     None => None,
                 }
             }
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => None,
         }

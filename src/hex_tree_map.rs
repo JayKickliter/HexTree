@@ -93,14 +93,14 @@ impl<V> HexTreeMap<V, NullCompactor> {
 
 impl<V, C: Compactor<V>> HexTreeMap<V, C> {
     /// Adds a hexagon/value pair to the set.
-    pub fn insert(&mut self, hex: Cell, value: V) {
-        let base_cell = hex.base();
-        let digits = Digits::new(hex);
+    pub fn insert(&mut self, cell: Cell, value: V) {
+        let base_cell = cell.base();
+        let digits = Digits::new(cell);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(hex, 0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(cell, 0_u8, digits, value, &mut self.compactor),
             None => {
                 let mut node = Box::new(Node::new());
-                node.insert(hex, 0_u8, digits, value, &mut self.compactor);
+                node.insert(cell, 0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -150,22 +150,22 @@ impl<V, C> HexTreeMap<V, C> {
         self.len() == 0
     }
 
-    /// Returns `true` if the set fully contains `hex`.
+    /// Returns `true` if the set fully contains `cell`.
     ///
     /// This method will return `true` if any of the following are
     /// true:
     ///
     /// 1. There was an earlier [insert][Self::insert] call with
-    ///    precisely this target hex.
+    ///    precisely this target cell.
     /// 2. Several previously inserted hexagons coalesced into
-    ///    precisely this target hex.
+    ///    precisely this target cell.
     /// 3. The set contains a complete (leaf) parent of this target
-    ///    hex due to 1 or 2.
-    pub fn contains(&self, hex: Cell) -> bool {
-        let base_cell = hex.base();
+    ///    cell due to 1 or 2.
+    pub fn contains(&self, cell: Cell) -> bool {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(hex);
+                let digits = Digits::new(cell);
                 node.contains(digits)
             }
             None => false,
@@ -173,39 +173,42 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// Returns a reference to the value corresponding to the given
-    /// hex or one of its parents.
-    pub fn get(&self, hex: Cell) -> Option<(Cell, &V)> {
-        let base_cell = hex.base();
+    /// cell or one of its parents.
+    pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(hex);
-                node.get(0, hex, digits)
+                let digits = Digits::new(cell);
+                node.get(0, cell, digits)
             }
             None => None,
         }
     }
 
     /// Returns a reference to the value corresponding to the given
-    /// hex or one of its parents.
-    pub fn get_mut(&mut self, hex: Cell) -> Option<(Cell, &mut V)> {
-        let base_cell = hex.base();
+    /// cell or one of its parents.
+    pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
-                let digits = Digits::new(hex);
-                node.get_mut(0, hex, digits)
+                let digits = Digits::new(cell);
+                node.get_mut(0, cell, digits)
             }
             None => None,
         }
     }
 
     /// Gets the entry in the map for the corresponding cell.
-    pub fn entry(&'_ mut self, hex: Cell) -> Entry<'_, V, C> {
-        if self.get(hex).is_none() {
-            return Entry::Vacant(VacantEntry { hex, map: self });
+    pub fn entry(&'_ mut self, cell: Cell) -> Entry<'_, V, C> {
+        if self.get(cell).is_none() {
+            return Entry::Vacant(VacantEntry {
+                target_cell: cell,
+                map: self,
+            });
         }
         Entry::Occupied(OccupiedEntry {
-            hex,
-            cell_value: self.get_mut(hex).unwrap(),
+            target_cell: cell,
+            cell_value: self.get_mut(cell).unwrap(),
         })
     }
 
