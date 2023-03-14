@@ -165,7 +165,7 @@ fn map_iteration(c: &mut Criterion) {
     let map_precompacted: HexTreeMap<u32> = COMPACT_US915_INDICES
         .iter()
         .map(|&idx| Cell::try_from(idx).unwrap())
-        .zip((0..).into_iter())
+        .zip(0..)
         .collect();
 
     group.bench_function("collect to vec", |b| {

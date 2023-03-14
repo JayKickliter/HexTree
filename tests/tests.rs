@@ -7,7 +7,6 @@ use std::convert::TryFrom;
 /// Perform a linear search of `region` for `target` cell.
 fn naive_contains(region: &[Cell], target: Cell) -> bool {
     let promotions = (0..16)
-        .into_iter()
         .map(|res| {
             if res < target.res() {
                 target.to_parent(res).unwrap()
