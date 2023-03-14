@@ -18,11 +18,11 @@ The key feature of a hextree is that its keys (H3 cells) are
 hierarchical. For instance, if you previously inserted an entry for a
 low-res cell, but later query for a higher-res child cell, the tree
 returns the value for the lower res cell. Additionally, with
-[compaction], trees can automatically coalesce adjacent high-res
-hexagons into their parent cell. For very large regions, the compaction
-process _can_ continue to lowest resolution cells (res-0), possibly
-removing millions of redundant cells from the tree. For example, a set
-of 4,795,661 res-7 cells representing North America coalesces [into a
+[compaction], trees can automatically coalesce adjacent high-res cells
+into their parent cell. For very large regions, the compaction process
+_can_ continue to lowest resolution cells (res-0), possibly removing
+millions of redundant cells from the tree. For example, a set of
+4,795,661 res-7 cells representing North America coalesces [into a
 42,383 element `HexTreeSet`][us915].
 
 A hextree's internal structure exactly matches the semantics of an [H3
