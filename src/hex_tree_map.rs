@@ -24,15 +24,10 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// Let's create a HexTreeMap for Monaco as visualized in the map
 ///
 /// ```
-/// # use h3ron::Error;
-/// #
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use geo_types::coord;
 /// use hextree::{Cell, compaction::EqCompactor, HexTreeMap};
-/// use h3ron::H3Cell;
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
-/// #    use h3ron::{Index, FromH3Index};
 /// #    let idx_bytes = include_bytes!("../assets//monaco.res12.h3idx");
 /// #    let rdr = &mut idx_bytes.as_slice();
 /// #    let mut cells = Vec::new();
@@ -54,11 +49,13 @@ use std::{cmp::PartialEq, iter::FromIterator};
 ///
 /// // You can see in the map above that our set covers Point 1 (green
 /// // check) but not Point 2 (red x), let's test that.
-/// let point_1 = H3Cell::from_coordinate(coord! {x: 7.42418, y: 43.73631}, 12)?;
-/// let point_2 = H3Cell::from_coordinate(coord! {x: 7.42855, y: 43.73008}, 12)?;
+/// // Lat/lon 43.73631, 7.42418 @ res 12
+/// let point_1 = Cell::from_raw(0x8c3969a41da15ff)?;
+/// // Lat/lon 43.73008, 7.42855 @ res 12
+/// let point_2 = Cell::from_raw(0x8c3969a415065ff)?;
 ///
-/// assert_eq!(monaco.get(Cell::from_raw(*point_1)?), Some(&Region::Monaco));
-/// assert_eq!(monaco.get(Cell::from_raw(*point_2)?), None);
+/// assert_eq!(monaco.get(point_1).unzip().1, Some(&Region::Monaco));
+/// assert_eq!(monaco.get(point_2).unzip().1, None);
 ///
 /// #     Ok(())
 /// # }
@@ -92,15 +89,15 @@ impl<V> HexTreeMap<V, NullCompactor> {
 }
 
 impl<V, C: Compactor<V>> HexTreeMap<V, C> {
-    /// Adds a hexagon/value pair to the set.
-    pub fn insert(&mut self, hex: Cell, value: V) {
-        let base_cell = hex.base();
-        let digits = Digits::new(hex);
+    /// Adds a cell/value pair to the set.
+    pub fn insert(&mut self, cell: Cell, value: V) {
+        let base_cell = cell.base();
+        let digits = Digits::new(cell);
         match self.nodes[base_cell as usize].as_mut() {
-            Some(node) => node.insert(0_u8, digits, value, &mut self.compactor),
+            Some(node) => node.insert(cell, 0_u8, digits, value, &mut self.compactor),
             None => {
                 let mut node = Box::new(Node::new());
-                node.insert(0_u8, digits, value, &mut self.compactor);
+                node.insert(cell, 0_u8, digits, value, &mut self.compactor);
                 self.nodes[base_cell as usize] = Some(node);
             }
         }
@@ -137,7 +134,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns the number of H3 cells in the set.
     ///
-    /// This method only considers complete, or leaf, hexagons in the
+    /// This method only considers complete, or leaf, cells in the
     /// set. Due to automatic compaction, this number may be
     /// significantly smaller than the number of source cells used to
     /// create the set.
@@ -150,22 +147,22 @@ impl<V, C> HexTreeMap<V, C> {
         self.len() == 0
     }
 
-    /// Returns `true` if the set fully contains `hex`.
+    /// Returns `true` if the set fully contains `cell`.
     ///
     /// This method will return `true` if any of the following are
     /// true:
     ///
     /// 1. There was an earlier [insert][Self::insert] call with
-    ///    precisely this target hex.
-    /// 2. Several previously inserted hexagons coalesced into
-    ///    precisely this target hex.
+    ///    precisely this target cell.
+    /// 2. Several previously inserted cells coalesced into
+    ///    precisely this target cell.
     /// 3. The set contains a complete (leaf) parent of this target
-    ///    hex due to 1 or 2.
-    pub fn contains(&self, hex: Cell) -> bool {
-        let base_cell = hex.base();
+    ///    cell due to 1 or 2.
+    pub fn contains(&self, cell: Cell) -> bool {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(hex);
+                let digits = Digits::new(cell);
                 node.contains(digits)
             }
             None => false,
@@ -173,39 +170,48 @@ impl<V, C> HexTreeMap<V, C> {
     }
 
     /// Returns a reference to the value corresponding to the given
-    /// hex or one of its parents.
-    pub fn get(&self, hex: Cell) -> Option<&V> {
-        let base_cell = hex.base();
+    /// target cell or one of its parents.
+    ///
+    /// Note that this method also returns a Cell, which may be a
+    /// parent of the target cell provided.
+    pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
-                let digits = Digits::new(hex);
-                node.get(digits)
+                let digits = Digits::new(cell);
+                node.get(0, cell, digits)
             }
             None => None,
         }
     }
 
-    /// Returns a reference to the value corresponding to the given
-    /// hex or one of its parents.
-    pub fn get_mut(&mut self, hex: Cell) -> Option<&mut V> {
-        let base_cell = hex.base();
+    /// Returns a mutable reference to the value corresponding to the
+    /// given target cell or one of its parents.
+    ///
+    /// Note that this method also returns a Cell, which may be a
+    /// parent of the target cell provided.
+    pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
+        let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
-                let digits = Digits::new(hex);
-                node.get_mut(digits)
+                let digits = Digits::new(cell);
+                node.get_mut(0, cell, digits)
             }
             None => None,
         }
     }
 
     /// Gets the entry in the map for the corresponding cell.
-    pub fn entry(&'_ mut self, hex: Cell) -> Entry<'_, V, C> {
-        if self.get(hex).is_none() {
-            return Entry::Vacant(VacantEntry { hex, map: self });
+    pub fn entry(&'_ mut self, cell: Cell) -> Entry<'_, V, C> {
+        if self.get(cell).is_none() {
+            return Entry::Vacant(VacantEntry {
+                target_cell: cell,
+                map: self,
+            });
         }
         Entry::Occupied(OccupiedEntry {
-            hex,
-            value: self.get_mut(hex).unwrap(),
+            target_cell: cell,
+            cell_value: self.get_mut(cell).unwrap(),
         })
     }
 
@@ -294,7 +300,7 @@ impl<V, C> std::ops::Index<Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: Cell) -> &V {
-        self.get(cell).expect("no entry found for cell")
+        self.get(cell).expect("no entry found for cell").1
     }
 }
 
@@ -323,7 +329,7 @@ impl<V, C> std::ops::Index<&Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index(&self, cell: &Cell) -> &V {
-        self.get(*cell).expect("no entry found for cell")
+        self.get(*cell).expect("no entry found for cell").1
     }
 }
 
@@ -353,7 +359,7 @@ impl<V, C> std::ops::IndexMut<Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: Cell) -> &mut V {
-        self.get_mut(cell).expect("no entry found for cell")
+        self.get_mut(cell).expect("no entry found for cell").1
     }
 }
 
@@ -383,7 +389,7 @@ impl<V, C> std::ops::IndexMut<&Cell> for HexTreeMap<V, C> {
     ///
     /// Panics if the cell is not present in the `HexTreeMap`.
     fn index_mut(&mut self, cell: &Cell) -> &mut V {
-        self.get_mut(*cell).expect("no entry found for cell")
+        self.get_mut(*cell).expect("no entry found for cell").1
     }
 }
 

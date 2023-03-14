@@ -17,14 +17,14 @@ pub enum Entry<'a, V, C> {
 /// A view into an occupied entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct OccupiedEntry<'a, V> {
-    pub(crate) hex: Cell,
-    pub(crate) value: &'a mut V,
+    pub(crate) target_cell: Cell,
+    pub(crate) cell_value: (Cell, &'a mut V),
 }
 
 /// A view into a vacant entry in a `HexTreeMap`. It is part of the
 /// [`Entry`] enum.
 pub struct VacantEntry<'a, V, C> {
-    pub(crate) hex: Cell,
+    pub(crate) target_cell: Cell,
     pub(crate) map: &'a mut HexTreeMap<V, C>,
 }
 
@@ -45,12 +45,12 @@ where
     /// let eiffel_tower_res12 = Cell::from_raw(0x8c1fb46741ae9ff)?;
     ///
     /// map.entry(eiffel_tower_res12)
-    ///    .and_modify(|v| *v = "Paris")
+    ///    .and_modify(|_actual_cell, v| *v = "Paris")
     ///    .or_insert("France");
     /// assert_eq!(map[eiffel_tower_res12], "France");
     ///
     /// map.entry(eiffel_tower_res12)
-    ///     .and_modify(|v| *v = "Paris")
+    ///     .and_modify(|_actual_cell, v| *v = "Paris")
     ///     .or_insert("France");
     /// assert_eq!(map[eiffel_tower_res12], "Paris");
     /// # Ok(())
@@ -58,12 +58,18 @@ where
     /// ```
     pub fn and_modify<F>(self, f: F) -> Self
     where
-        F: FnOnce(&mut V),
+        F: FnOnce(Cell, &mut V),
     {
         match self {
-            Entry::Occupied(OccupiedEntry { hex, value }) => {
-                f(value);
-                Entry::Occupied(OccupiedEntry { hex, value })
+            Entry::Occupied(OccupiedEntry {
+                target_cell,
+                cell_value: (cell, value),
+            }) => {
+                f(cell, value);
+                Entry::Occupied(OccupiedEntry {
+                    target_cell,
+                    cell_value: (cell, value),
+                })
             }
             Entry::Vacant(_) => self,
         }
@@ -88,13 +94,16 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn or_insert(self, default: V) -> &'a mut V {
+    pub fn or_insert(self, default: V) -> (Cell, &'a mut V) {
         match self {
-            Entry::Occupied(OccupiedEntry { hex: _hex, value }) => value,
-            Entry::Vacant(VacantEntry { hex, map }) => {
-                map.insert(hex, default);
+            Entry::Occupied(OccupiedEntry {
+                target_cell: _,
+                cell_value,
+            }) => cell_value,
+            Entry::Vacant(VacantEntry { target_cell, map }) => {
+                map.insert(target_cell, default);
                 // We just inserted; unwrap is fine.
-                map.get_mut(hex).unwrap()
+                map.get_mut(target_cell).unwrap()
             }
         }
     }
@@ -118,16 +127,19 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn or_insert_with<F>(self, default: F) -> &'a mut V
+    pub fn or_insert_with<F>(self, default: F) -> (Cell, &'a mut V)
     where
         F: FnOnce() -> V,
     {
         match self {
-            Entry::Occupied(OccupiedEntry { hex: _hex, value }) => value,
-            Entry::Vacant(VacantEntry { hex, map }) => {
-                map.insert(hex, default());
+            Entry::Occupied(OccupiedEntry {
+                target_cell: _,
+                cell_value,
+            }) => cell_value,
+            Entry::Vacant(VacantEntry { target_cell, map }) => {
+                map.insert(target_cell, default());
                 // We just inserted; unwrap is fine.
-                map.get_mut(hex).unwrap()
+                map.get_mut(target_cell).unwrap()
             }
         }
     }
@@ -156,13 +168,16 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn or_default(self) -> &'a mut V {
+    pub fn or_default(self) -> (Cell, &'a mut V) {
         match self {
-            Entry::Occupied(OccupiedEntry { hex: _hex, value }) => value,
-            Entry::Vacant(VacantEntry { hex, map }) => {
-                map.insert(hex, Default::default());
+            Entry::Occupied(OccupiedEntry {
+                target_cell: _,
+                cell_value,
+            }) => cell_value,
+            Entry::Vacant(VacantEntry { target_cell, map }) => {
+                map.insert(target_cell, Default::default());
                 // We just inserted; unwrap is fine.
-                map.get_mut(hex).unwrap()
+                map.get_mut(target_cell).unwrap()
             }
         }
     }

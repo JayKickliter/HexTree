@@ -191,7 +191,7 @@ impl Cell {
 
     /// Returns this cell's base (res-0 parent).
     #[inline]
-    pub const fn base(&self) -> u8 {
+    pub(crate) const fn base(&self) -> u8 {
         let base = Index(self.0).base();
         debug_assert!(base < 122, "valid base indices are [0,122]");
         base

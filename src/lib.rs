@@ -1,28 +1,30 @@
 #![deny(unsafe_code, missing_docs, rustdoc::broken_intra_doc_links)]
 
-//! hextree provides tree structures that represent geographic regions with H3 cells.
+//! hextree provides tree structures that represent geographic regions
+//! with H3 cells.
 //!
 //! The primary structures are:
-//! - [`HexTreeMap`][crate::HexTreeMap]: an H3Cell-to-value map.
-//! - [`HexTreeSet`][crate::HexTreeSet]: an H3Cell set for hit-testing.
+//! - [`HexTreeMap`][crate::HexTreeMap]: an Cell-to-value map.
+//! - [`HexTreeSet`][crate::HexTreeSet]: a Cell set for hit-testing.
 //!
 //! You can think of `HexTreeMap` vs. `HexTreeSet` as [`HashMap`] vs. [`HashSet`].
 //!
 //! For the rest of the documentation, we will use hextree to refer to
 //! the general data structure.
 //!
-//! ## How is this different from `HashMap<H3Cell, V>`?
+//! ## How is this different from `HashMap<Cell, V>`?
 //!
 //! The key feature of a hextree is that its keys (H3 cells) are
 //! hierarchical. For instance, if you previously inserted an entry
-//! for a low-res hex, but later query for a higher-res child hex, the
-//! tree returns the value for the lower res hex. Additionally, with
-//! [compaction], trees can automatically coalesce adjacent high-res
-//! hexagons into their parent hex. For every large regions, the
+//! for a low-res cell, but later query for a higher-res child cell,
+//! the tree returns the value for the lower res cell. Additionally,
+//! with [compaction], trees can automatically coalesce adjacent
+//! high-res cells into their parent cell. For very large regions, the
 //! compaction process _can_ continue to lowest resolution cells
 //! (res-0), possibly removing millions of redundant cells from the
 //! tree. For example, a set of 4,795,661 res-7 cells representing
-//! North America coalesces [into a 42,383 element `HexTreeSet`][us915].
+//! North America coalesces [into a 42,383 element
+//! `HexTreeSet`][us915].
 //!
 //! A hextree's internal structure exactly matches the semantics of an
 //! [H3 cell]. The root of the tree has 122 resolution-0 nodes,

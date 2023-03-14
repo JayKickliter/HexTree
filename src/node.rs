@@ -1,11 +1,11 @@
-use crate::{compaction::Compactor, digits::Digits};
+use crate::{compaction::Compactor, digits::Digits, Cell};
 
 // TODO: storing indices in nodes is not necessary, since the index
 // can always be derived by the path through the tree to get to the
 // node. That said, storing the index doesn't impose much lookup
 // overhead.
 //
-// The benefit of storing indices is vastly simpler Hex+Value
+// The benefit of storing indices is vastly simpler Cell+Value
 // iteration of a tree.
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -30,8 +30,14 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn insert<C>(&mut self, res: u8, mut digits: Digits, value: V, compactor: &mut C)
-    where
+    pub(crate) fn insert<C>(
+        &mut self,
+        cell: Cell,
+        res: u8,
+        mut digits: Digits,
+        value: V,
+        compactor: &mut C,
+    ) where
         C: Compactor<V>,
     {
         match digits.next() {
@@ -42,20 +48,20 @@ impl<V> Node<V> {
                 }
                 Self::Parent(children) => {
                     match children[digit as usize].as_mut() {
-                        Some(node) => node.insert(res + 1, digits, value, compactor),
+                        Some(node) => node.insert(cell, res + 1, digits, value, compactor),
                         None => {
                             let mut node = Node::new();
-                            node.insert(res + 1, digits, value, compactor);
+                            node.insert(cell, res + 1, digits, value, compactor);
                             children[digit as usize] = Some(Box::new(node));
                         }
                     };
                 }
             },
         };
-        self.coalesce(res, compactor);
+        self.coalesce(cell.to_parent(res).unwrap(), compactor);
     }
 
-    pub(crate) fn coalesce<C>(&mut self, res: u8, compactor: &mut C)
+    pub(crate) fn coalesce<C>(&mut self, cell: Cell, compactor: &mut C)
     where
         C: Compactor<V>,
     {
@@ -70,7 +76,7 @@ impl<V> Node<V> {
             for (v, n) in arr.iter_mut().zip(children.iter()) {
                 *v = n.as_ref().map(|n| n.as_ref()).and_then(Node::value);
             }
-            if let Some(value) = compactor.compact(res, arr) {
+            if let Some(value) = compactor.compact(cell, arr) {
                 *self = Self::Leaf(value)
             }
         };
@@ -94,42 +100,46 @@ impl<V> Node<V> {
                     None => false,
                 }
             }
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => false,
         }
     }
 
-    pub(crate) fn get(&self, mut digits: Digits) -> Option<&V> {
-        if let Self::Leaf(val) = self {
-            return Some(val);
-        }
-
+    pub(crate) fn get(&self, res: u8, cell: Cell, mut digits: Digits) -> Option<(Cell, &V)> {
         match (digits.next(), self) {
-            (_, Self::Leaf(_)) => unreachable!(),
+            (None, Self::Leaf(val)) => Some((cell, val)),
+            (Some(_), Self::Leaf(val)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), val))
+            }
             (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
-                Some(node) => node.get(digits),
+                Some(node) => node.get(res + 1, cell, digits),
                 None => None,
             },
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => None,
         }
     }
 
-    pub(crate) fn get_mut(&mut self, mut digits: Digits) -> Option<&mut V> {
-        if let Self::Leaf(val) = self {
-            return Some(val);
-        }
+    pub(crate) fn get_mut(
+        &mut self,
+        res: u8,
+        cell: Cell,
+        mut digits: Digits,
+    ) -> Option<(Cell, &mut V)> {
         match (digits.next(), self) {
-            (_, Self::Leaf(_)) => unreachable!(),
+            (None, Self::Leaf(val)) => Some((cell, val)),
+            (Some(_), Self::Leaf(val)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), val))
+            }
             (Some(digit), Self::Parent(children)) => {
                 match &mut children.as_mut_slice()[digit as usize] {
-                    Some(node) => node.get_mut(digits),
+                    Some(node) => node.get_mut(res + 1, cell, digits),
                     None => None,
                 }
             }
-            // No digits left, but `self` isn't full, so this hex
+            // No digits left, but `self` isn't full, so this cell
             // can't fully contain the target.
             (None, Self::Parent(_)) => None,
         }

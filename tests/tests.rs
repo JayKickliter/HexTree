@@ -7,7 +7,6 @@ use std::convert::TryFrom;
 /// Perform a linear search of `region` for `target` cell.
 fn naive_contains(region: &[Cell], target: Cell) -> bool {
     let promotions = (0..16)
-        .into_iter()
         .map(|res| {
             if res < target.res() {
                 target.to_parent(res).unwrap()
@@ -80,9 +79,13 @@ fn mono_map() {
     }
 
     for (name, cells) in regions.iter() {
-        assert!(cells
-            .iter()
-            .all(|c| monomap.get(Cell::try_from(*c).unwrap()) == Some(&name)));
+        assert!(cells.iter().map(|c| Cell::try_from(*c).unwrap()).all(|c| {
+            if let Some((cell, val)) = monomap.get(c) {
+                c.to_parent(cell.res()) == Some(cell) && val == &name
+            } else {
+                false
+            }
+        }));
     }
 }
 
