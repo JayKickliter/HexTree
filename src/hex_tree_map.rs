@@ -89,7 +89,7 @@ impl<V> HexTreeMap<V, NullCompactor> {
 }
 
 impl<V, C: Compactor<V>> HexTreeMap<V, C> {
-    /// Adds a hexagon/value pair to the set.
+    /// Adds a cell/value pair to the set.
     pub fn insert(&mut self, cell: Cell, value: V) {
         let base_cell = cell.base();
         let digits = Digits::new(cell);
@@ -134,7 +134,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// Returns the number of H3 cells in the set.
     ///
-    /// This method only considers complete, or leaf, hexagons in the
+    /// This method only considers complete, or leaf, cells in the
     /// set. Due to automatic compaction, this number may be
     /// significantly smaller than the number of source cells used to
     /// create the set.
@@ -154,7 +154,7 @@ impl<V, C> HexTreeMap<V, C> {
     ///
     /// 1. There was an earlier [insert][Self::insert] call with
     ///    precisely this target cell.
-    /// 2. Several previously inserted hexagons coalesced into
+    /// 2. Several previously inserted cells coalesced into
     ///    precisely this target cell.
     /// 3. The set contains a complete (leaf) parent of this target
     ///    cell due to 1 or 2.
@@ -173,7 +173,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// target cell or one of its parents.
     ///
     /// Note that this method also returns a Cell, which may be a
-    /// parent of the target hex provided.
+    /// parent of the target cell provided.
     pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
@@ -189,7 +189,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// given target cell or one of its parents.
     ///
     /// Note that this method also returns a Cell, which may be a
-    /// parent of the target hex provided.
+    /// parent of the target cell provided.
     pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
