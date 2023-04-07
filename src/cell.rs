@@ -202,6 +202,19 @@ impl Cell {
     pub const fn res(&self) -> u8 {
         Index(self.0).res()
     }
+
+    /// Returns true if `self` is related to `other`.
+    ///
+    /// "Related" can be any of the following:
+    /// - `self` == `other`
+    /// - `self` is a parent cell of `other`
+    /// - `other` is a parent cell of `self`
+    #[inline]
+    pub fn is_related_to(&self, other: &Self) -> bool {
+        let common_res = std::cmp::min(self.res(), other.res());
+        // Unwrap is fine. We already checked to the min common resolution.
+        self.to_parent(common_res).unwrap() == other.to_parent(common_res).unwrap()
+    }
 }
 
 impl TryFrom<u64> for Cell {
