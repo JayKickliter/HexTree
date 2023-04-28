@@ -61,10 +61,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// # }
 /// ```
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde-support",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
     nodes: Box<[Option<Box<Node<V>>>]>,

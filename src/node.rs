@@ -8,10 +8,7 @@ use crate::{compaction::Compactor, digits::Digits, Cell};
 // The benefit of storing indices is vastly simpler Cell+Value
 // iteration of a tree.
 #[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde-support",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(align(64))]
 pub(crate) enum Node<V> {
     Parent([Option<Box<Node<V>>>; 7]),
