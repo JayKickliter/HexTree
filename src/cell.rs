@@ -14,7 +14,7 @@ use std::{convert::TryFrom, fmt};
 /// [index manipulation]: https://observablehq.com/@nrabinowitz/h3-index-bit-layout?collection=@nrabinowitz/h3
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    feature = "serde-support",
+    feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
@@ -132,7 +132,7 @@ impl Index {
 /// [HexTreeMap][crate::HexTreeMap]'s key type.
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    feature = "serde-support",
+    feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]

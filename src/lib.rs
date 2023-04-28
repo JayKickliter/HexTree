@@ -34,7 +34,7 @@
 //!
 //! ## Features
 //!
-//! * **`serde-support`**: support for serialization via [serde].
+//! * **`serde`**: support for serialization via [serde].
 //!
 //! [`HashMap`]: https://doc.rust-lang.org/std/collections/struct.HashMap.html
 //! [`HashSet`]: https://doc.rust-lang.org/std/collections/struct.HashSet.html

@@ -17,10 +17,7 @@ pub trait Compactor<V> {
 
 /// Does not perform any compaction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "serde-support",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NullCompactor;
 
 impl<V> Compactor<V> for NullCompactor {
@@ -31,10 +28,7 @@ impl<V> Compactor<V> for NullCompactor {
 
 /// Compacts when all children are complete.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "serde-support",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetCompactor;
 
 impl Compactor<()> for SetCompactor {
@@ -49,10 +43,7 @@ impl Compactor<()> for SetCompactor {
 
 /// Compacts when all children are complete and have the same value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "serde-support",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EqCompactor;
 
 impl<V: PartialEq + Clone> Compactor<V> for EqCompactor {
