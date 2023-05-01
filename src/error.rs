@@ -3,6 +3,7 @@ pub type Result<T = ()> = std::result::Result<T, Error>;
 
 /// Error type for this crate.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// An invalid raw source value was used for an H3 cell.
     Index(u64),

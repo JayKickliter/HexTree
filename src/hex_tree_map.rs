@@ -403,3 +403,20 @@ impl<V: std::fmt::Debug, C> std::fmt::Debug for HexTreeMap<V, C> {
         f.write_str("}")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_is_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<HexTreeMap<i32>>();
+    }
+
+    #[test]
+    fn map_is_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<HexTreeMap<i32>>();
+    }
+}
