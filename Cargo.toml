@@ -4,6 +4,7 @@ version = "0.3.0"
 authors = ["Jay Kickliter <jay@kickliter.com>", "Andrew Thompson <andrew@hijacked.us>"]
 categories = ["science", "data-structures"]
 edition = "2018"
+documentation = "https://docs.rs/hextree"
 exclude = [".github/*", "/assets/*", "/test/*"]
 readme = "README.md"
 keywords = ["geo", "geography", "geospatial", "gis", "h3"]
