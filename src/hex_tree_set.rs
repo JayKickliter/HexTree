@@ -17,7 +17,7 @@ use std::iter::FromIterator;
 ///
 /// ```
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use geo_types::coord;
+/// use geo::coord;
 /// use hextree::{Cell, HexTreeSet};
 /// #
 /// #    use byteorder::{LittleEndian as LE, ReadBytesExt};
