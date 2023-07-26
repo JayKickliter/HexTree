@@ -46,6 +46,8 @@
 mod cell;
 pub mod compaction;
 mod digits;
+#[cfg(feature = "disktree")]
+pub mod disktree;
 mod entry;
 mod error;
 pub mod hex_tree_map;

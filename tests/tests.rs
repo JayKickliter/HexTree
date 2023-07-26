@@ -1,4 +1,4 @@
-use geo_types::coord;
+use geo::coord;
 use h3_lorawan_regions as regions;
 use h3ron::H3Cell;
 use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
