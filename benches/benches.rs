@@ -1,7 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use geo::polygon;
 use geo_types::coord;
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
+};
+use h3o::{
+    geom::{ContainmentMode, PolyfillConfig, Polygon, ToCells},
+    CellIndex, Resolution,
 };
 use h3ron::H3Cell;
 use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
@@ -196,8 +201,62 @@ fn set_iteration(c: &mut Criterion) {
     group.bench_function("count", |b| b.iter(|| set_precompacted.iter().count()));
 }
 
+fn subtree_iter(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Subtree iteration");
+
+    let eiffel_tower_cells = {
+        let eiffel_tower_poly: geo::Polygon<f64> = polygon![
+            (x: 2.2918576408729336, y: 48.85772170856845),
+            (x: 2.295281693366718,  y: 48.86007711794011),
+            (x: 2.2968743826623665, y: 48.859023236935656),
+            (x: 2.293404431342765,  y: 48.85672213596601),
+            (x: 2.2918484611075485, y: 48.85772774822141),
+            (x: 2.2918576408729336, y: 48.85772170856845),
+        ];
+        let eiffel_tower_poly = Polygon::from_degrees(eiffel_tower_poly).unwrap();
+        let mut eiffel_tower_cells: Vec<CellIndex> = eiffel_tower_poly
+            .to_cells(
+                PolyfillConfig::new(Resolution::Twelve)
+                    .containment_mode(ContainmentMode::IntersectsBoundary),
+            )
+            .collect();
+        eiffel_tower_cells.sort();
+        eiffel_tower_cells.dedup();
+        eiffel_tower_cells
+            .into_iter()
+            .map(|cell| Cell::try_from(u64::from(cell)).unwrap())
+            .collect::<Vec<Cell>>()
+    };
+    let hex_map: HexTreeMap<i32> = eiffel_tower_cells
+        .iter()
+        .enumerate()
+        .map(|(i, &cell)| (cell, i as i32))
+        .collect();
+
+    let eiffel_tower_res1_parent = eiffel_tower_cells[0].to_parent(1).unwrap();
+    group.bench_function("Eiffel Tower Sum - Res1", |b| {
+        b.iter(|| {
+            hex_map
+                .subtree_iter(eiffel_tower_res1_parent)
+                .map(|(_cell, val)| val)
+                .sum::<i32>()
+        })
+    });
+
+    let eiffel_tower_res6_parent = eiffel_tower_cells[0].to_parent(7).unwrap();
+    group.bench_function("Eiffel Tower Sum - Res7", |b| {
+        b.iter(|| {
+            hex_map
+                .subtree_iter(eiffel_tower_res6_parent)
+                .map(|(_cell, val)| val)
+                .sum::<i32>()
+        })
+    });
+}
+
 criterion_group!(
     benches,
+    subtree_iter,
     set_lookup,
     map_lookup,
     set_iteration,

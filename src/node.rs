@@ -119,6 +119,48 @@ impl<V> Node<V> {
         }
     }
 
+    /// Returns a raw [`Node`] for `cell`, if present.
+    ///
+    /// Unlike the public [`Node::get`], this function returns [`Some`] for
+    /// parent nodes.
+    pub(crate) fn get_raw(
+        &self,
+        res: u8,
+        cell: Cell,
+        mut digits: Digits,
+    ) -> Option<(Cell, &Node<V>)> {
+        match (digits.next(), self) {
+            (None, _) => Some((cell, self)),
+            (Some(_), Self::Leaf(_)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), self))
+            }
+            (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
+                Some(node) => node.get_raw(res + 1, cell, digits),
+                None => None,
+            },
+        }
+    }
+
+    pub(crate) fn get_raw_mut(
+        &mut self,
+        res: u8,
+        cell: Cell,
+        mut digits: Digits,
+    ) -> Option<(Cell, &mut Node<V>)> {
+        match (digits.next(), self) {
+            (None, s) => Some((cell, s)),
+            (Some(_), s @ Self::Leaf(_)) => {
+                Some((cell.to_parent(res).expect("invalid condition"), s))
+            }
+            (Some(digit), Self::Parent(ref mut children)) => {
+                match children.as_mut_slice()[digit as usize].as_deref_mut() {
+                    Some(node) => node.get_raw_mut(res + 1, cell, digits),
+                    None => None,
+                }
+            }
+        }
+    }
+
     pub(crate) fn get_mut(
         &mut self,
         res: u8,

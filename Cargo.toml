@@ -28,8 +28,10 @@ serde = { version = "1", optional = true, features = ["derive"] }
 [dev-dependencies]
 byteorder = "1"
 criterion = { version = "0.3", features = ["html_reports"] }
-h3ron = "0.15.1"
+geo = "0.26.0"
 geo-types = "0.7"
+h3o = { version = "0.4.0", features = ["geo"] }
+h3ron = "0.15.1"
 
 [dev-dependencies.h3-lorawan-regions]
 git = "https://github.com/JayKickliter/h3-lorawan-regions.git"

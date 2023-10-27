@@ -53,7 +53,49 @@ fn all_up() {
     assert!(!us915_tree.contains(paris));
     assert!(!naive_contains(&us915_cells, paris));
 
-    assert!(us915_cells.iter().all(|&cell| us915_tree.contains(cell)));
+    assert!(us915_cells
+        .iter()
+        .all(|&cell| { us915_tree.get(cell).unwrap().0 == cell }));
+
+    for expected in us915_cells.iter().filter(|cell| cell.res() > 0) {
+        let parent_to_expected = expected.to_parent(expected.res() - 1).unwrap();
+        let subtree = us915_tree
+            .subtree_iter(parent_to_expected)
+            .map(|(cell, _)| cell);
+        let subcells = subtree.collect::<Vec<Cell>>();
+        assert_ne!(subcells.len(), 0);
+        for subcell in subcells {
+            assert_eq!(
+                subcell.to_parent(parent_to_expected.res()).unwrap(),
+                parent_to_expected
+            );
+        }
+    }
+
+    // https://wolf-h3-viewer.glitch.me/?h3=812a3ffffffffff
+    let northeast_res1 = Cell::try_from(0x812a3ffffffffff).unwrap();
+
+    // Lets get rid of all raw cells not under northeast_res1.
+    let expected_north_cells = {
+        let mut expected_north_cells = us915_cells
+            .iter()
+            .filter(|&&cell| cell.res() > 1 && cell.is_related_to(&northeast_res1))
+            .copied()
+            .collect::<Vec<Cell>>();
+        expected_north_cells.sort_by_key(|cell| cell.into_raw());
+        expected_north_cells
+    };
+
+    let subtree_cells = {
+        let mut subtree_cells = us915_tree
+            .subtree_iter(northeast_res1)
+            .map(|(cell, _)| cell)
+            .collect::<Vec<Cell>>();
+        subtree_cells.sort_by_key(|cell| cell.into_raw());
+        subtree_cells
+    };
+
+    assert_eq!(expected_north_cells, subtree_cells);
 }
 
 #[test]
