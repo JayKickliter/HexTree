@@ -141,4 +141,39 @@ impl<V> Node<V> {
             (None, Self::Parent(_)) => None,
         }
     }
+
+    pub(crate) fn reduce<F>(&self, res: u8, mut digits: Digits, mut f: F) -> Option<V>
+    where
+        V: Copy,
+        F: FnMut(u8, &[V]) -> V,
+    {
+        match (digits.next(), self) {
+            // Can't reduce when the target cell is higher resolution
+            // than this leaf node.
+            (Some(_digit), Self::Leaf(_)) => None,
+            (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
+                Some(node) => node.reduce(res + 1, digits, f),
+                None => None,
+            },
+            (None, node) => Some(node.apply_reduction(res, &mut f)),
+        }
+    }
+
+    pub(crate) fn apply_reduction<F>(&self, res: u8, f: &mut F) -> V
+    where
+        V: Copy,
+        F: FnMut(u8, &[V]) -> V,
+    {
+        match self {
+            Node::Leaf(val) => *val,
+            Node::Parent(children) => {
+                let nodes_to_reduce: Vec<V> = children
+                    .iter()
+                    .flatten()
+                    .map(|child_node| child_node.apply_reduction(res + 1, f))
+                    .collect();
+                f(res, nodes_to_reduce.as_slice())
+            }
+        }
+    }
 }

@@ -198,6 +198,23 @@ impl<V, C> HexTreeMap<V, C> {
         }
     }
 
+    /// Reduces the all children of `cell` using the user-provided
+    /// function.
+    pub fn reduce<F>(&self, cell: Cell, f: F) -> Option<V>
+    where
+        V: Copy,
+        F: FnMut(u8, &[V]) -> V,
+    {
+        let base_cell = cell.base();
+        match self.nodes[base_cell as usize].as_ref() {
+            Some(node) => {
+                let digits = Digits::new(cell);
+                node.reduce(0, digits, f)
+            }
+            None => None,
+        }
+    }
+
     /// Gets the entry in the map for the corresponding cell.
     pub fn entry(&'_ mut self, cell: Cell) -> Entry<'_, V, C> {
         if self.get(cell).is_none() {
