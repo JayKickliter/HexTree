@@ -292,6 +292,12 @@ impl CellStack {
     }
 }
 
+impl From<Cell> for CellStack {
+    fn from(cell: Cell) -> CellStack {
+        CellStack(Some(cell))
+    }
+}
+
 impl fmt::Debug for Cell {
     /// [H3 Index](https://h3geo.org/docs/core-library/h3Indexing/):
     /// > The canonical string representation of an H3Index is the

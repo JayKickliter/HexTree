@@ -2,6 +2,7 @@
 
 pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use crate::{
+    cell::CellStack,
     compaction::{Compactor, NullCompactor},
     digits::Digits,
     node::Node,
@@ -214,13 +215,55 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// An iterator visiting all cell-value pairs in arbitrary order.
     pub fn iter(&self) -> impl Iterator<Item = (Cell, &V)> {
-        crate::iteration::Iter::new(&self.nodes)
+        crate::iteration::Iter::new(&self.nodes, CellStack::new())
     }
 
     /// An iterator visiting all cell-value pairs in arbitrary order
     /// with mutable references to the values.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Cell, &mut V)> {
-        crate::iteration::IterMut::new(&mut self.nodes)
+        crate::iteration::IterMut::new(&mut self.nodes, CellStack::new())
+    }
+
+    /// An iterator visiting the specified cell or its children
+    /// references to the values.
+    pub fn subtree_iter(&self, cell: Cell) -> impl Iterator<Item = (Cell, &V)> {
+        let base_cell = cell.base();
+        match self.nodes[base_cell as usize].as_ref() {
+            Some(node) => {
+                let digits = Digits::new(cell);
+                match node.get_raw(0, cell, digits) {
+                    Some((cell, Node::Leaf(val))) => Some((cell, val))
+                        .into_iter()
+                        .chain(crate::iteration::Iter::empty()),
+                    Some((cell, Node::Parent(children))) => None
+                        .into_iter()
+                        .chain(crate::iteration::Iter::new(children, CellStack::from(cell))),
+                    None => None.into_iter().chain(crate::iteration::Iter::empty()),
+                }
+            }
+            None => None.into_iter().chain(crate::iteration::Iter::empty()),
+        }
+    }
+
+    /// An iterator visiting the specified cell or its children with
+    /// mutable references to the values.
+    pub fn subtree_iter_mut(&mut self, cell: Cell) -> impl Iterator<Item = (Cell, &mut V)> {
+        let base_cell = cell.base();
+        match self.nodes[base_cell as usize].as_mut() {
+            Some(node) => {
+                let digits = Digits::new(cell);
+                match node.get_raw_mut(0, cell, digits) {
+                    Some((cell, Node::Leaf(val))) => Some((cell, val))
+                        .into_iter()
+                        .chain(crate::iteration::IterMut::empty()),
+                    Some((cell, Node::Parent(children))) => None.into_iter().chain(
+                        crate::iteration::IterMut::new(children, CellStack::from(cell)),
+                    ),
+                    None => None.into_iter().chain(crate::iteration::IterMut::empty()),
+                }
+            }
+            None => None.into_iter().chain(crate::iteration::IterMut::empty()),
+        }
     }
 }
 
