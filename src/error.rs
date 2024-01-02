@@ -12,6 +12,10 @@ pub enum Error {
     #[cfg(feature = "disktree")]
     Io(std::io::Error),
 
+    /// Not a disktree.
+    #[cfg(feature = "disktree")]
+    NotDisktree,
+
     /// Unsupported version.
     #[cfg(feature = "disktree")]
     Version(u8),
@@ -45,6 +49,9 @@ impl std::error::Error for Error {
             Error::Io(inner) => inner.source(),
 
             #[cfg(feature = "disktree")]
+            Error::NotDisktree => None,
+
+            #[cfg(feature = "disktree")]
             Error::Version(_) => None,
 
             #[cfg(feature = "disktree")]
@@ -66,6 +73,11 @@ impl std::fmt::Display for Error {
 
             #[cfg(feature = "disktree")]
             Error::Io(io_error) => io_error.fmt(f),
+
+            #[cfg(feature = "disktree")]
+            Error::NotDisktree => {
+                write!(f, "file missing magic header")
+            }
 
             #[cfg(feature = "disktree")]
             Error::Version(version) => {

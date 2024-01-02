@@ -1,13 +1,11 @@
 //! An on-disk hextree.
 
 pub use tree::DiskTree;
-pub use value::ReadVal;
 
 mod dptr;
 mod iter;
 mod node;
 mod tree;
-mod value;
 mod writer;
 
 #[cfg(test)]
@@ -51,15 +49,15 @@ mod tests {
         monaco
             .to_disktree(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
             .unwrap();
-        let mut monaco_disktree = DiskTree::from_reader(file).unwrap();
+        let monaco_disktree = DiskTree::open(path).unwrap();
 
         assert_eq!(monaco.get(point_2).unzip().1, None);
         assert_eq!(monaco.get(point_1).unzip().1, Some(&Region::Monaco));
 
         for (ht_cell, &ht_val) in monaco.iter() {
             let now = std::time::Instant::now();
-            let (dt_cell, dt_val_rdr) = monaco_disktree.seek_to_cell(ht_cell).unwrap().unwrap();
-            let dt_val = bincode::deserialize_from(dt_val_rdr).unwrap();
+            let (dt_cell, val_buf) = monaco_disktree.get(ht_cell).unwrap().unwrap();
+            let dt_val = bincode::deserialize_from(val_buf).unwrap();
             let lookup_duration = now.elapsed();
             println!("loookup of {dt_cell} took {lookup_duration:?}");
             assert_eq!(ht_val, dt_val);
@@ -90,33 +88,16 @@ mod tests {
         monaco
             .to_disktree(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
             .unwrap();
-        let mut monaco_disktree = DiskTree::from_reader(file).unwrap();
-
-        // Error type for user-defined deserializer.
-        #[derive(Debug)]
-        enum RdrErr {
-            Bincode(bincode::Error),
-            Disktree(crate::error::Error),
-        }
-
-        // Our function for deserializing `Cell` values from the
-        // disktree.
-        fn deserialze_cell<R: std::io::Read>(
-            res: crate::error::Result<(Cell, &mut R)>,
-        ) -> Result<(Cell, Cell), RdrErr> {
-            match res {
-                Ok((cell, rdr)) => match bincode::deserialize_from(rdr) {
-                    Ok(val) => Ok((cell, val)),
-                    Err(e) => Err(RdrErr::Bincode(e)),
-                },
-                Err(e) => Err(RdrErr::Disktree(e)),
-            }
-        }
+        let monaco_disktree = DiskTree::open(path).unwrap();
 
         // Create the iterator with the user-defined deserialzer.
-        let disktree_iter = monaco_disktree.iter(deserialze_cell).unwrap();
+        let disktree_iter = monaco_disktree.iter().unwrap();
         let start = std::time::Instant::now();
-        let disktree_collection: Vec<_> = disktree_iter.collect::<Result<Vec<_>, _>>().unwrap();
+        let mut disktree_collection = Vec::new();
+        for res in disktree_iter {
+            let (cell, val_buf) = res.unwrap();
+            disktree_collection.push((cell, bincode::deserialize_from(val_buf).unwrap()));
+        }
         let elapsed = start.elapsed();
         println!("{elapsed:?}");
         let start = std::time::Instant::now();

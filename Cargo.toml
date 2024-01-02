@@ -20,11 +20,18 @@ all-features = true
 
 [features]
 default = ["disktree"]
-disktree = ["serde", "byteorder"]
+disktree = [
+  "byteorder",
+  "leb128",
+  "memmap",
+  "serde",
+]
 serde = ["dep:serde"]
 
 [dependencies]
 byteorder = { version = "1", optional = true }
+leb128 = { version = "0.2.5", optional = true }
+memmap = { version = "0.7", optional = true }
 serde = { version = "1", optional = true, features = ["derive"] }
 
 [dev-dependencies]

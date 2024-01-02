@@ -51,7 +51,7 @@ fn set_lookup(c: &mut Criterion) {
 fn disk_set_lookup(c: &mut Criterion) {
     let mut group = c.benchmark_group("US915 DiskTreeSet lookup");
 
-    let mut us915_disk_set = {
+    let us915_disk_set = {
         let us915_set: HexTreeSet = PLAIN_US915_INDICES
             .iter()
             .map(|&idx| Cell::try_from(idx).unwrap())
@@ -60,7 +60,7 @@ fn disk_set_lookup(c: &mut Criterion) {
         us915_set
             .to_disktree(&mut file, |_, _| Ok::<(), std::io::Error>(()))
             .unwrap();
-        DiskTree::from_reader(file).unwrap()
+        DiskTree::memmap(file).unwrap()
     };
 
     let tarpon_springs = coord! {x: -82.753822, y: 28.15215};

@@ -1,6 +1,6 @@
 use crate::{
     compaction::Compactor,
-    disktree::dptr::Dptr,
+    disktree::{dptr::Dptr, tree::HDR_MAGIC},
     error::{Error, Result},
     node::Node,
     HexTreeMap,
@@ -13,35 +13,46 @@ impl<V, C: Compactor<V>> HexTreeMap<V, C> {
     pub fn to_disktree<W, F, E>(&self, wtr: W, f: F) -> Result
     where
         W: Write + Seek,
-        F: Fn(&mut W, &V) -> std::result::Result<(), E>,
+        F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
-        DiskTreeWriter(wtr).write(self, f)
+        DiskTreeWriter::new(wtr).write(self, f)
     }
 }
 
-pub(crate) struct DiskTreeWriter<W>(W);
+pub(crate) struct DiskTreeWriter<W> {
+    scratch_pad: Vec<u8>,
+    wtr: W,
+}
+
+impl<W> DiskTreeWriter<W> {
+    pub fn new(wtr: W) -> Self {
+        let scratch_pad = Vec::new();
+        Self { wtr, scratch_pad }
+    }
+}
 
 impl<W: Write + Seek> DiskTreeWriter<W> {
     pub fn write<V, C, F, E>(&mut self, hextree: &HexTreeMap<V, C>, mut f: F) -> Result
     where
-        F: Fn(&mut W, &V) -> std::result::Result<(), E>,
+        F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
+        // Write magic string
+        self.wtr.write_all(HDR_MAGIC)?;
         // Write version field
         const VERSION: u8 = 0;
-        self.0.write_u8(0xFE - VERSION)?;
-        // Write base cells placeholder offsets.
+        self.wtr.write_u8(0xFE - VERSION)?;
+
         let mut fixups: Vec<(Dptr, &Node<V>)> = Vec::new();
 
-        // Empty:  | DPTR_DEFAULT |
-        // Node:   | Dptr         |
+        // Write base cells placeholder offsets.
         for base in hextree.nodes.iter() {
             match base.as_deref() {
-                None => Dptr::null().write(&mut self.0)?,
+                None => Dptr::null().write(&mut self.wtr)?,
                 Some(node) => {
                     fixups.push((self.pos()?, node));
-                    Dptr::null().write(&mut self.0)?
+                    Dptr::null().write(&mut self.wtr)?
                 }
             }
         }
@@ -49,30 +60,32 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
         for (fixee_dptr, node) in fixups {
             let node_dptr = self.write_node(node, &mut f)?;
             self.seek_to(fixee_dptr)?;
-            node_dptr.write(&mut self.0)?;
+            node_dptr.write(&mut self.wtr)?;
         }
 
         Ok(())
     }
 
-    /// Leaf:   | 0_u8 | bincode bytes |
-    /// Parent: | 1_u8 | Dptr | Dptr | Dptr | Dptr | Dptr | Dptr | Dptr |
     fn write_node<V, F, E>(&mut self, node: &Node<V>, f: &mut F) -> Result<Dptr>
     where
-        F: Fn(&mut W, &V) -> std::result::Result<(), E>,
+        F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
-        let node_pos: Dptr = self.0.seek(SeekFrom::End(0))?.into();
+        let node_pos: Dptr = self.wtr.seek(SeekFrom::End(0))?.into();
         let mut node_fixups: Vec<(Dptr, &Node<V>)> = Vec::new();
         match node {
             Node::Leaf(val) => {
-                self.0.write_u8(0)?;
-                // bincode::serialize_into(&mut self.0, val)?;
-                f(&mut self.0, val).map_err(|e| Error::Writer(Box::new(e)))?
+                self.wtr.write_u8(0)?;
+                debug_assert!(self.scratch_pad.is_empty());
+                f(&mut self.scratch_pad, val).map_err(|e| Error::Writer(Box::new(e)))?;
+                let val_len = self.scratch_pad.len() as u64;
+                leb128::write::unsigned(&mut self.wtr, val_len)?;
+                self.wtr.write_all(&self.scratch_pad)?;
+                self.scratch_pad.clear();
             }
             Node::Parent(children) => {
                 let tag_pos = self.pos()?;
-                self.0.write_u8(0b1000_0000)?;
+                self.wtr.write_u8(0b1000_0000)?;
                 let mut tag = 0;
                 for child in children.iter() {
                     match child.as_deref() {
@@ -86,32 +99,31 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
                             // this node is empty.
                             tag = (tag >> 1) | 0b1000_0000;
                             node_fixups.push((self.pos()?, node));
-                            Dptr::null().write(&mut self.0)?;
+                            Dptr::null().write(&mut self.wtr)?;
                         }
                     };
                 }
                 self.seek_to(tag_pos)?;
                 // Make the top bit 1 as a sentinel.
                 tag = (tag >> 1) | 0b1000_0000;
-                // println!("{tag_pos:010x}: write tag {tag:08b}");
-                self.0.write_u8(tag)?;
+                self.wtr.write_u8(tag)?;
             }
         };
 
         for (fixee_dptr, node) in node_fixups {
             let node_dptr = self.write_node(node, f)?;
             self.seek_to(fixee_dptr)?;
-            node_dptr.write(&mut self.0)?;
+            node_dptr.write(&mut self.wtr)?;
         }
 
         Ok(node_pos)
     }
 
     fn pos(&mut self) -> Result<Dptr> {
-        Ok(Dptr::from(self.0.stream_position()?))
+        Ok(Dptr::from(self.wtr.stream_position()?))
     }
 
     fn seek_to(&mut self, dptr: Dptr) -> Result<Dptr> {
-        Ok(Dptr::from(self.0.seek(SeekFrom::Start(u64::from(dptr)))?))
+        Ok(Dptr::from(self.wtr.seek(SeekFrom::Start(u64::from(dptr)))?))
     }
 }
