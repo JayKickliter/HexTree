@@ -1,11 +1,15 @@
 //! An on-disk hextree.
 
+#[cfg(not(target_pointer_width = "64"))]
+compile_warning!("disktree may silently fail on non-64bit systems");
+
 pub use tree::DiskTree;
 
 mod dptr;
 mod iter;
 mod node;
 mod tree;
+mod varint;
 mod writer;
 
 #[cfg(test)]
@@ -13,6 +17,7 @@ mod tests {
     use super::*;
     use byteorder::{LittleEndian as LE, ReadBytesExt};
     use serde::{Deserialize, Serialize};
+    use std::collections::HashMap;
 
     #[test]
     fn test_roundtrip_monaco() {
@@ -62,6 +67,100 @@ mod tests {
             println!("loookup of {dt_cell} took {lookup_duration:?}");
             assert_eq!(ht_val, dt_val);
             assert_eq!(ht_cell, dt_cell);
+        }
+    }
+
+    #[test]
+    fn test_variable_sized_vals() {
+        use crate::{Cell, HexTreeMap};
+
+        let (keeper_cells, test_cells): (Vec<Cell>, Vec<Cell>) = {
+            let idx_bytes = include_bytes!("../../assets/monaco.res12.h3idx");
+            let rdr = &mut idx_bytes.as_slice();
+            let mut cells = Vec::new();
+            while let Ok(idx) = rdr.read_u64::<LE>() {
+                cells.push(Cell::from_raw(idx).unwrap());
+            }
+            let (l, r) = cells.split_at(625);
+            (l.to_vec(), r.to_vec())
+        };
+
+        assert_eq!(keeper_cells.len(), 625);
+        assert_eq!(test_cells.len(), 200);
+
+        fn cell_to_value(cell: &Cell) -> Vec<u8> {
+            use std::hash::{Hash, Hasher};
+            let mut s = std::collections::hash_map::DefaultHasher::new();
+            cell.hash(&mut s);
+            // Generate length between 0..=0xFFFF;
+            let len = match s.finish() & 0xFFFF {
+                len if len.trailing_ones() == 8 => 0,
+                len => len,
+            };
+            // assert_ne!(len, 0);
+            (0..len).map(|idx| idx as u8).collect::<Vec<u8>>()
+        }
+
+        let mut zero_len_val_cnt = 0;
+
+        let monaco_hashmap: HashMap<&Cell, Vec<u8>> = {
+            let mut map = HashMap::new();
+            for cell in &keeper_cells {
+                let val = cell_to_value(cell);
+                if val.is_empty() {
+                    zero_len_val_cnt += 1;
+                }
+                map.insert(cell, val);
+            }
+            map
+        };
+
+        // Ensure we get at least one 0-length value.
+        assert_ne!(zero_len_val_cnt, 0);
+
+        let monaco_hextree: HexTreeMap<&[u8]> = {
+            let mut map = HexTreeMap::new();
+            for (cell, val) in &monaco_hashmap {
+                map.insert(**cell, val.as_slice())
+            }
+            map
+        };
+
+        let monaco_disktree: DiskTree<_> = {
+            let file = tempfile::NamedTempFile::new().unwrap();
+            let (mut file, path) = file.keep().unwrap();
+            monaco_hextree
+                .to_disktree(&mut file, |wtr, val| wtr.write_all(val))
+                .unwrap();
+            let _ = file;
+            DiskTree::open(path).unwrap()
+        };
+
+        // Assert neither hashmap nor disktree contain reserved cells.
+        for cell in test_cells {
+            assert!(monaco_hashmap.get(&cell).is_none());
+            assert!(!monaco_disktree.contains(cell).unwrap());
+        }
+
+        // Assert disktree contains all the same values as the
+        // hashmap.
+        for (cell, val) in monaco_hashmap
+            .iter()
+            .map(|(cell, vec)| (**cell, vec.as_slice()))
+        {
+            assert_eq!((cell, val), monaco_disktree.get(cell).unwrap().unwrap())
+        }
+
+        // Assert hashmap contains all the same values as the
+        // disktree.
+        for (cell, val) in monaco_disktree.iter().unwrap().map(|entry| entry.unwrap()) {
+            assert_eq!(
+                (cell, val),
+                (
+                    cell,
+                    monaco_hashmap.get(&cell).map(|vec| vec.as_slice()).unwrap()
+                )
+            )
         }
     }
 

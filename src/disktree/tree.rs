@@ -9,6 +9,7 @@ use memmap::{Mmap, MmapOptions};
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
+    ops::Range,
     path::Path,
 };
 
@@ -67,11 +68,8 @@ impl<B: AsRef<[u8]>> DiskTree<B> {
             return Ok(None);
         }
         let digits = Digits::new(cell);
-        if let Some((cell, dptr)) = Self::_get(&mut csr, 0, node_dptr, cell, digits)? {
-            csr.seek(SeekFrom::Start(dptr.into()))?;
-            let val_len = leb128::read::unsigned(&mut csr).unwrap() as usize;
-            let val_start = csr.position() as usize;
-            let val_bytes = &self.0.as_ref()[val_start..][..val_len];
+        if let Some((cell, range)) = Self::_get(&mut csr, 0, node_dptr, cell, digits)? {
+            let val_bytes = &self.0.as_ref()[range];
             Ok(Some((cell, val_bytes)))
         } else {
             Ok(None)
@@ -95,14 +93,14 @@ impl<B: AsRef<[u8]>> DiskTree<B> {
         node_dptr: Dptr,
         cell: Cell,
         mut digits: Digits,
-    ) -> Result<Option<(Cell, Dptr)>> {
+    ) -> Result<Option<(Cell, Range<usize>)>> {
         csr.seek(SeekFrom::Start(node_dptr.into()))?;
         let node = Node::read(csr)?;
         match (digits.next(), node) {
-            (None, Node::Leaf(dptr)) => Ok(Some((cell, dptr))),
-            (Some(_), Node::Leaf(dptr)) => Ok(Some((
+            (None, Node::Leaf(range)) => Ok(Some((cell, range))),
+            (Some(_), Node::Leaf(range)) => Ok(Some((
                 cell.to_parent(res).expect("invalid condition"),
-                dptr,
+                range,
             ))),
             (Some(digit), Node::Parent(children)) => match children[digit as usize] {
                 None => Ok(None),

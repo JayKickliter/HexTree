@@ -26,7 +26,7 @@ pub enum Error {
 
     /// Invalid value size bytes found in disktree header.
     #[cfg(feature = "disktree")]
-    Prefixed(u32),
+    Varint(u32),
 
     /// User-provided serializer failed.
     #[cfg(feature = "disktree")]
@@ -58,7 +58,7 @@ impl std::error::Error for Error {
             Error::InvalidTag(_, _) => None,
 
             #[cfg(feature = "disktree")]
-            Error::Prefixed(_) => None,
+            Error::Varint(_) => None,
 
             #[cfg(feature = "disktree")]
             Error::Writer(inner) => inner.source(),
@@ -90,8 +90,8 @@ impl std::fmt::Display for Error {
             }
 
             #[cfg(feature = "disktree")]
-            Error::Prefixed(bytes) => {
-                write!(f, "prefixed sizes can only be 0 to 4 bytes, got {bytes}")
+            Error::Varint(val) => {
+                write!(f, "byte sequence is not a valid varint, got {val}")
             }
 
             #[cfg(feature = "disktree")]

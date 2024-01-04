@@ -22,7 +22,6 @@ all-features = true
 default = ["disktree"]
 disktree = [
   "byteorder",
-  "leb128",
   "memmap",
   "serde",
 ]

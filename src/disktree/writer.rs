@@ -1,6 +1,6 @@
 use crate::{
     compaction::Compactor,
-    disktree::{dptr::Dptr, tree::HDR_MAGIC},
+    disktree::{dptr::Dptr, tree::HDR_MAGIC, varint},
     error::{Error, Result},
     node::Node,
     HexTreeMap,
@@ -75,16 +75,16 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
         let mut node_fixups: Vec<(Dptr, &Node<V>)> = Vec::new();
         match node {
             Node::Leaf(val) => {
-                self.wtr.write_u8(0)?;
-                debug_assert!(self.scratch_pad.is_empty());
+                self.scratch_pad.clear();
                 f(&mut self.scratch_pad, val).map_err(|e| Error::Writer(Box::new(e)))?;
                 let val_len = self.scratch_pad.len() as u64;
-                leb128::write::unsigned(&mut self.wtr, val_len)?;
+                varint::write(&mut self.wtr, val_len as u32)?;
                 self.wtr.write_all(&self.scratch_pad)?;
-                self.scratch_pad.clear();
             }
             Node::Parent(children) => {
                 let tag_pos = self.pos()?;
+                // Write a dummy value so children have accurate
+                // stream position information.
                 self.wtr.write_u8(0b1000_0000)?;
                 let mut tag = 0;
                 for child in children.iter() {

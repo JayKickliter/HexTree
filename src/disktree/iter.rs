@@ -1,6 +1,6 @@
 use crate::{
     cell::CellStack,
-    disktree::{dptr::Dptr, tree::HDR_SZ},
+    disktree::{dptr::Dptr, tree::HDR_SZ, varint},
     error::Result,
     Cell,
 };
@@ -47,14 +47,8 @@ impl<'a> Iter<'a> {
     fn read_node(&mut self, dptr: Dptr) -> Result<Node> {
         let dptr = self.seek_to(dptr)?;
         let node_tag = self.disktree_csr.read_u8()?;
-        let base_pos = Dptr::from(u64::from(dptr) + std::mem::size_of_val(&node_tag) as u64);
-        debug_assert_eq!(
-            base_pos,
-            Dptr::from(self.disktree_csr.stream_position().unwrap())
-        );
-        assert!(node_tag == 0 || node_tag > 0b1000_0000);
-        if node_tag == 0 {
-            Ok(Node::Leaf(base_pos))
+        if 0 == node_tag & 0b1000_0000 {
+            Ok(Node::Leaf(dptr))
         } else {
             let mut children = self.node_buf();
             let n_children = (node_tag & 0b0111_1111).count_ones() as usize;
@@ -160,13 +154,20 @@ impl<'a> Iterator for Iter<'a> {
                         self.stop_yeilding();
                         return Some(Err(e));
                     }
-                    let val_len = leb128::read::unsigned(&mut self.disktree_csr).unwrap() as usize;
-                    let pos = self.disktree_csr.position() as usize;
-                    let val_buf = &self.disktree_buf[pos..][..val_len];
-                    return Some(Ok((
-                        *self.cell_stack.cell().expect("corrupted cell-stack"),
-                        val_buf,
-                    )));
+                    match varint::read(&mut self.disktree_csr) {
+                        Err(e) => {
+                            self.stop_yeilding();
+                            return Some(Err(e));
+                        }
+                        Ok((val_len, _n_read)) => {
+                            let pos = self.disktree_csr.position() as usize;
+                            let val_buf = &self.disktree_buf[pos..][..val_len as usize];
+                            return Some(Ok((
+                                *self.cell_stack.cell().expect("corrupted cell-stack"),
+                                val_buf,
+                            )));
+                        }
+                    }
                 }
             };
         }
