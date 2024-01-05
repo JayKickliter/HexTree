@@ -1,6 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use geo::polygon;
-use geo_types::coord;
+use geo::{coord, polygon};
 use h3_lorawan_regions::{
     compact::US915 as COMPACT_US915_INDICES, nocompact::US915 as PLAIN_US915_INDICES,
 };
@@ -9,7 +8,7 @@ use h3o::{
     CellIndex, Resolution,
 };
 use h3ron::H3Cell;
-use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
+use hextree::{compaction::EqCompactor, disktree::DiskTreeMap, Cell, HexTreeMap, HexTreeSet};
 use std::convert::TryFrom;
 
 fn set_lookup(c: &mut Criterion) {
@@ -45,6 +44,50 @@ fn set_lookup(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("Paris", resolution), &paris, |b, &cell| {
             b.iter(|| us915_set.contains(cell))
+        });
+    }
+}
+
+fn disk_set_lookup(c: &mut Criterion) {
+    let mut group = c.benchmark_group("US915 DiskTreeSet lookup");
+
+    let us915_disk_set = {
+        let us915_set: HexTreeSet = PLAIN_US915_INDICES
+            .iter()
+            .map(|&idx| Cell::try_from(idx).unwrap())
+            .collect();
+        let mut file = tempfile::tempfile().unwrap();
+        us915_set
+            .to_disktree(&mut file, |_, _| Ok::<(), std::io::Error>(()))
+            .unwrap();
+        DiskTreeMap::memmap(file).unwrap()
+    };
+
+    let tarpon_springs = coord! {x: -82.753822, y: 28.15215};
+    let gulf_of_mexico = coord! {x: -83.101920, y: 28.128096};
+    let paris = coord! {x: 2.340340, y: 48.868680};
+
+    for resolution in [0, 4, 8, 12, 15] {
+        let tarpon_springs =
+            Cell::try_from(*H3Cell::from_coordinate(tarpon_springs, resolution).unwrap()).unwrap();
+        let gulf_of_mexico =
+            Cell::try_from(*H3Cell::from_coordinate(gulf_of_mexico, resolution).unwrap()).unwrap();
+        let paris = Cell::try_from(*H3Cell::from_coordinate(paris, resolution).unwrap()).unwrap();
+
+        group.bench_with_input(
+            BenchmarkId::new("Tarpon Spring", resolution),
+            &tarpon_springs,
+            |b, &cell| b.iter(|| us915_disk_set.contains(cell)),
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("Gulf of Mexico", resolution),
+            &gulf_of_mexico,
+            |b, &cell| b.iter(|| us915_disk_set.contains(cell)),
+        );
+
+        group.bench_with_input(BenchmarkId::new("Paris", resolution), &paris, |b, &cell| {
+            b.iter(|| us915_disk_set.contains(cell))
         });
     }
 }
@@ -256,8 +299,9 @@ fn subtree_iter(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    subtree_iter,
     set_lookup,
+    disk_set_lookup,
+    subtree_iter,
     map_lookup,
     set_iteration,
     map_iteration,

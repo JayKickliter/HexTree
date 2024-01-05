@@ -65,7 +65,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
-    nodes: Box<[Option<Box<Node<V>>>]>,
+    pub(crate) nodes: Box<[Option<Box<Node<V>>>]>,
     /// User-provided compator. Defaults to the null compactor.
     compactor: C,
 }
