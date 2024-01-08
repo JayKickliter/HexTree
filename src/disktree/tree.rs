@@ -5,7 +5,7 @@ use crate::{
     Cell, Error,
 };
 use byteorder::ReadBytesExt;
-use memmap::{Mmap, MmapOptions};
+use memmap::MmapOptions;
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
@@ -17,26 +17,27 @@ pub(crate) const HDR_MAGIC: &[u8] = b"hextree\0";
 pub(crate) const HDR_SZ: u64 = HDR_MAGIC.len() as u64 + 1;
 
 /// An on-disk hextree map.
-pub struct DiskTreeMap<B>(B);
+pub struct DiskTreeMap(Box<dyn AsRef<[u8]>>);
 
-impl DiskTreeMap<Mmap> {
+impl DiskTreeMap {
     /// Opens a `DiskTree` at the specified path.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path)?;
-        Self::memmap(file)
+        Self::memmap(&file)
     }
 
-    /// Memory maps the provided disktree-containing.
-    pub fn memmap(file: File) -> Result<Self> {
+    /// Memory maps the provided disktree-containing file.
+    pub fn memmap(file: &File) -> Result<Self> {
         #[allow(unsafe_code)]
-        let mm = unsafe { MmapOptions::new().map(&file)? };
+        let mm = unsafe { MmapOptions::new().map(file)? };
         Self::with_buf(mm)
     }
-}
 
-impl<B: AsRef<[u8]>> DiskTreeMap<B> {
     /// Opens a `DiskTree` with a provided buffer.
-    pub fn with_buf(buf: B) -> Result<Self> {
+    pub fn with_buf<B>(buf: B) -> Result<Self>
+    where
+        B: AsRef<[u8]> + 'static,
+    {
         let mut csr = Cursor::new(buf);
         let magic = {
             let mut buf = [0_u8; HDR_MAGIC.len()];
@@ -53,7 +54,7 @@ impl<B: AsRef<[u8]>> DiskTreeMap<B> {
             0xFE - csr.read_u8()?
         };
         match version {
-            0 => Ok(Self(csr.into_inner())),
+            0 => Ok(Self(Box::new(csr.into_inner()))),
             unsupported_version => Err(Error::Version(unsupported_version)),
         }
     }
@@ -61,7 +62,7 @@ impl<B: AsRef<[u8]>> DiskTreeMap<B> {
     /// Returns `(Cell, &[u8])`, if present.
     pub fn get(&self, cell: Cell) -> Result<Option<(Cell, &[u8])>> {
         let base_cell_pos = Self::base_cell_dptr(cell);
-        let mut csr = Cursor::new(self.0.as_ref());
+        let mut csr = Cursor::new((*self.0).as_ref());
         csr.seek(SeekFrom::Start(base_cell_pos.into()))?;
         let node_dptr = Dptr::read(&mut csr)?;
         if node_dptr.is_null() {
@@ -69,7 +70,7 @@ impl<B: AsRef<[u8]>> DiskTreeMap<B> {
         }
         let digits = Digits::new(cell);
         if let Some((cell, range)) = Self::_get(&mut csr, 0, node_dptr, cell, digits)? {
-            let val_bytes = &self.0.as_ref()[range];
+            let val_bytes = &(*self.0).as_ref()[range];
             Ok(Some((cell, val_bytes)))
         } else {
             Ok(None)
@@ -84,7 +85,7 @@ impl<B: AsRef<[u8]>> DiskTreeMap<B> {
     /// Returns an iterator visiting all `(Cell, &[u8])` pairs in
     /// arbitrary order.
     pub fn iter(&self) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
-        Iter::new(self.0.as_ref())
+        Iter::new((*self.0).as_ref())
     }
 
     fn _get(

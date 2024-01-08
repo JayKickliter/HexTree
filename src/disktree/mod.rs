@@ -126,7 +126,7 @@ mod tests {
             map
         };
 
-        let monaco_disktree: DiskTreeMap<_> = {
+        let monaco_disktree: DiskTreeMap = {
             let file = tempfile::NamedTempFile::new().unwrap();
             let (mut file, path) = file.keep().unwrap();
             monaco_hextree

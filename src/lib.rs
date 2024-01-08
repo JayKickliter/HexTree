@@ -4,8 +4,8 @@
 //! with H3 cells.
 //!
 //! The primary structures are:
-//! - [`HexTreeMap`][crate::HexTreeMap]: an Cell-to-value map.
-//! - [`HexTreeSet`][crate::HexTreeSet]: a Cell set for hit-testing.
+//! - [`HexTreeMap`]: an Cell-to-value map.
+//! - [`HexTreeSet`]: a Cell set for hit-testing.
 //!
 //! You can think of `HexTreeMap` vs. `HexTreeSet` as [`HashMap`] vs. [`HashSet`].
 //!
