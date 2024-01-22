@@ -36,9 +36,9 @@ serde = { version = "1", optional = true, features = ["derive"] }
 bincode = { version = "1.3.3" }
 byteorder = { version = "1" }
 criterion = { version = "0.3", features = ["html_reports"] }
-geo = "0.26.0"
-h3o = { version = "0.4.0", features = ["geo"] }
-h3ron = "0.15.1"
+geo = "0.27"
+h3o = { version = "0.5.0", features = ["geo"] }
+h3ron = "0.18"
 tempfile = "3"
 
 [dev-dependencies.h3-lorawan-regions]

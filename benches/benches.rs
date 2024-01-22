@@ -8,7 +8,7 @@ use h3o::{
     CellIndex, Resolution,
 };
 use h3ron::H3Cell;
-use hextree::{compaction::EqCompactor, disktree::DiskTreeMap, Cell, HexTreeMap, HexTreeSet};
+use hextree::{compaction::EqCompactor, Cell, HexTreeMap, HexTreeSet};
 use std::convert::TryFrom;
 
 fn set_lookup(c: &mut Criterion) {
@@ -48,7 +48,12 @@ fn set_lookup(c: &mut Criterion) {
     }
 }
 
+#[cfg(not(feature = "disktree"))]
+fn disk_set_lookup(_c: &mut Criterion) {}
+
+#[cfg(feature = "disktree")]
 fn disk_set_lookup(c: &mut Criterion) {
+    use hextree::disktree::DiskTreeMap;
     let mut group = c.benchmark_group("US915 DiskTreeSet lookup");
 
     let us915_disk_set = {
@@ -60,7 +65,7 @@ fn disk_set_lookup(c: &mut Criterion) {
         us915_set
             .to_disktree(&mut file, |_, _| Ok::<(), std::io::Error>(()))
             .unwrap();
-        DiskTreeMap::memmap(file).unwrap()
+        DiskTreeMap::memmap(&file).unwrap()
     };
 
     let tarpon_springs = coord! {x: -82.753822, y: 28.15215};
