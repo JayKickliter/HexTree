@@ -18,7 +18,7 @@ pub(crate) const HDR_MAGIC: &[u8] = b"hextree\0";
 pub(crate) const HDR_SZ: u64 = HDR_MAGIC.len() as u64 + 1;
 
 /// An on-disk hextree map.
-pub struct DiskTreeMap(Box<dyn AsRef<[u8]> + Send>);
+pub struct DiskTreeMap(Box<dyn AsRef<[u8]> + Send + 'static>);
 
 impl DiskTreeMap {
     /// Opens a `DiskTree` at the specified path.
