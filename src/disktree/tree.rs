@@ -8,7 +8,7 @@ use byteorder::ReadBytesExt;
 use memmap::MmapOptions;
 use std::{
     fs::File,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Cursor, Read, Seek, SeekFrom, Write},
     marker::Send,
     ops::Range,
     path::Path,
@@ -57,6 +57,25 @@ impl DiskTreeMap {
         match version {
             0 => Ok(Self(Box::new(csr.into_inner()))),
             unsupported_version => Err(Error::Version(unsupported_version)),
+        }
+    }
+
+    /// Merge several `DiskTreeMap`s.
+    ///
+    /// Each map must contain exact either:
+    /// - one res0 node
+    /// - any number nodes which are all children of exactly one res0 node.
+    pub fn merge<W, F, E>(wtr: W, subtrees: &[DiskTreeMap], f: Option<F>) -> Result
+    where
+        W: Write + Seek,
+        F: FnMut(&mut dyn Write, &&[u8]) -> std::result::Result<(), E>,
+        E: std::error::Error + Sync + Send + 'static,
+    {
+        if let Some(f) = f {
+            crate::disktree::writer::DiskTreeWriter::new(wtr).merge(subtrees, f)
+        } else {
+            let f = |wtr: &mut dyn Write, val: &&[u8]| wtr.write_all(val);
+            crate::disktree::writer::DiskTreeWriter::new(wtr).merge(subtrees, f)
         }
     }
 
