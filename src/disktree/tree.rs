@@ -1,6 +1,6 @@
 use crate::{
     digits::Digits,
-    disktree::{dptr::Dptr, iter::Iter, node::Node},
+    disktree::{dptr::Dp, iter::Iter, node::Node},
     error::Result,
     Cell, Error,
 };
@@ -15,10 +15,10 @@ use std::{
 };
 
 pub(crate) const HDR_MAGIC: &[u8] = b"hextree\0";
-pub(crate) const HDR_SZ: u64 = HDR_MAGIC.len() as u64 + 1;
+pub(crate) const HDR_SZ: usize = HDR_MAGIC.len() + 1;
 
 /// An on-disk hextree map.
-pub struct DiskTreeMap(Box<dyn AsRef<[u8]> + Send + Sync + 'static>);
+pub struct DiskTreeMap(pub(crate) Box<dyn AsRef<[u8]> + Send + Sync + 'static>);
 
 impl DiskTreeMap {
     /// Opens a `DiskTree` at the specified path.
@@ -65,7 +65,7 @@ impl DiskTreeMap {
         let base_cell_pos = Self::base_cell_dptr(cell);
         let mut csr = Cursor::new((*self.0).as_ref());
         csr.seek(SeekFrom::Start(base_cell_pos.into()))?;
-        let node_dptr = Dptr::read(&mut csr)?;
+        let node_dptr = Dp::read(&mut csr)?;
         if node_dptr.is_null() {
             return Ok(None);
         }
@@ -92,7 +92,7 @@ impl DiskTreeMap {
     fn _get(
         csr: &mut Cursor<&[u8]>,
         res: u8,
-        node_dptr: Dptr,
+        node_dptr: Dp,
         cell: Cell,
         mut digits: Digits,
     ) -> Result<Option<(Cell, Range<usize>)>> {
@@ -115,7 +115,7 @@ impl DiskTreeMap {
     }
 
     /// Returns the DPtr to a base (res0) cell dptr.
-    fn base_cell_dptr(cell: Cell) -> Dptr {
-        Dptr::from(HDR_SZ + Dptr::size() * (cell.base() as u64))
+    fn base_cell_dptr(cell: Cell) -> Dp {
+        Dp::from(HDR_SZ + Dp::size() * cell.base() as usize)
     }
 }

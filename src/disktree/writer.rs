@@ -1,18 +1,21 @@
 use crate::{
     compaction::Compactor,
-    disktree::{dptr::Dptr, tree::HDR_MAGIC, varint},
+    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_MAGIC, varint},
     error::{Error, Result},
     node::Node,
     HexTreeMap,
 };
 use byteorder::WriteBytesExt;
-use std::io::{Seek, SeekFrom, Write};
+use std::io::Write;
 
-impl<V, C: Compactor<V>> HexTreeMap<V, C> {
+impl<V, C> HexTreeMap<V, C>
+where
+    C: Compactor<V>,
+{
     /// Write self to disk.
     pub fn to_disktree<W, F, E>(&self, wtr: W, f: F) -> Result
     where
-        W: Write + Seek,
+        W: Write + std::io::Seek,
         F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
@@ -32,7 +35,10 @@ impl<W> DiskTreeWriter<W> {
     }
 }
 
-impl<W: Write + Seek> DiskTreeWriter<W> {
+impl<W> DiskTreeWriter<W>
+where
+    W: Write + std::io::Seek,
+{
     pub fn write<V, C, F, E>(&mut self, hextree: &HexTreeMap<V, C>, mut f: F) -> Result
     where
         F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
@@ -44,35 +50,35 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
         const VERSION: u8 = 0;
         self.wtr.write_u8(0xFE - VERSION)?;
 
-        let mut fixups: Vec<(Dptr, &Node<V>)> = Vec::new();
+        let mut fixups: Vec<(Dp, &Node<V>)> = Vec::new();
 
         // Write base cells placeholder offsets.
         for base in hextree.nodes.iter() {
             match base.as_deref() {
-                None => Dptr::null().write(&mut self.wtr)?,
+                None => Dp::null().write(&mut self.wtr)?,
                 Some(node) => {
                     fixups.push((self.pos()?, node));
-                    Dptr::null().write(&mut self.wtr)?
+                    Dp::null().write(&mut self.wtr)?
                 }
             }
         }
 
         for (fixee_dptr, node) in fixups {
             let node_dptr = self.write_node(node, &mut f)?;
-            self.seek_to(fixee_dptr)?;
+            self.seek(fixee_dptr)?;
             node_dptr.write(&mut self.wtr)?;
         }
 
         Ok(())
     }
 
-    fn write_node<V, F, E>(&mut self, node: &Node<V>, f: &mut F) -> Result<Dptr>
+    fn write_node<V, F, E>(&mut self, node: &Node<V>, f: &mut F) -> Result<Dp>
     where
-        F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
+        F: FnMut(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
-        let node_pos: Dptr = self.wtr.seek(SeekFrom::End(0))?.into();
-        let mut node_fixups: Vec<(Dptr, &Node<V>)> = Vec::new();
+        let node_pos = self.fast_forward()?;
+        let mut node_fixups: Vec<(Dp, &Node<V>)> = Vec::new();
         match node {
             Node::Leaf(val) => {
                 self.scratch_pad.clear();
@@ -99,11 +105,11 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
                             // this node is empty.
                             tag = (tag >> 1) | 0b1000_0000;
                             node_fixups.push((self.pos()?, node));
-                            Dptr::null().write(&mut self.wtr)?;
+                            Dp::null().write(&mut self.wtr)?;
                         }
                     };
                 }
-                self.seek_to(tag_pos)?;
+                self.seek(tag_pos)?;
                 // Make the top bit 1 as a sentinel.
                 tag = (tag >> 1) | 0b1000_0000;
                 self.wtr.write_u8(tag)?;
@@ -112,18 +118,27 @@ impl<W: Write + Seek> DiskTreeWriter<W> {
 
         for (fixee_dptr, node) in node_fixups {
             let node_dptr = self.write_node(node, f)?;
-            self.seek_to(fixee_dptr)?;
+            self.seek(fixee_dptr)?;
             node_dptr.write(&mut self.wtr)?;
         }
 
         Ok(node_pos)
     }
+}
 
-    fn pos(&mut self) -> Result<Dptr> {
-        Ok(Dptr::from(self.wtr.stream_position()?))
+impl<W> DtSeek for DiskTreeWriter<W>
+where
+    W: std::io::Seek,
+{
+    fn pos(&mut self) -> std::io::Result<Dp> {
+        self.wtr.pos()
     }
 
-    fn seek_to(&mut self, dptr: Dptr) -> Result<Dptr> {
-        Ok(Dptr::from(self.wtr.seek(SeekFrom::Start(u64::from(dptr)))?))
+    fn seek(&mut self, dp: Dp) -> std::io::Result<Dp> {
+        DtSeek::seek(&mut self.wtr, dp)
+    }
+
+    fn fast_forward(&mut self) -> std::io::Result<Dp> {
+        self.wtr.fast_forward()
     }
 }

@@ -6,6 +6,7 @@ compile_warning!("disktree may silently fail on non-64bit systems");
 pub use tree::DiskTreeMap;
 
 mod dptr;
+mod dtseek;
 mod iter;
 mod node;
 mod tree;
