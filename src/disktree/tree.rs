@@ -9,6 +9,7 @@ use memmap::MmapOptions;
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
+    marker::Send,
     ops::Range,
     path::Path,
 };
@@ -17,7 +18,7 @@ pub(crate) const HDR_MAGIC: &[u8] = b"hextree\0";
 pub(crate) const HDR_SZ: u64 = HDR_MAGIC.len() as u64 + 1;
 
 /// An on-disk hextree map.
-pub struct DiskTreeMap(Box<dyn AsRef<[u8]>>);
+pub struct DiskTreeMap(Box<dyn AsRef<[u8]> + Send + Sync + 'static>);
 
 impl DiskTreeMap {
     /// Opens a `DiskTree` at the specified path.
@@ -36,7 +37,7 @@ impl DiskTreeMap {
     /// Opens a `DiskTree` with a provided buffer.
     pub fn with_buf<B>(buf: B) -> Result<Self>
     where
-        B: AsRef<[u8]> + 'static,
+        B: AsRef<[u8]> + Send + Sync + 'static,
     {
         let mut csr = Cursor::new(buf);
         let magic = {
