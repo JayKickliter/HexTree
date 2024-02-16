@@ -1,40 +1,34 @@
 use crate::{
     cell::CellStack,
-    disktree::{dptr::Dptr, tree::HDR_SZ, varint},
-    error::Result,
+    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_SZ, varint},
+    error::{Error, Result},
     Cell,
 };
 use byteorder::ReadBytesExt;
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::Cursor;
 
 pub(crate) struct Iter<'a> {
     cell_stack: CellStack,
-    curr_node: Option<(u8, Dptr)>,
+    curr_node: Option<(u8, Dp)>,
     disktree_buf: &'a [u8],
     disktree_csr: Cursor<&'a [u8]>,
-    node_stack: Vec<Vec<(u8, Dptr)>>,
-    recycle_bin: Vec<Vec<(u8, Dptr)>>,
+    node_stack: Vec<Vec<(u8, Dp)>>,
+    recycle_bin: Vec<Vec<(u8, Dp)>>,
 }
 
 enum Node {
     // File position for the fist byte of value data.
-    Leaf(Dptr),
+    Leaf(Dp),
     // (H3 Cell digit, file position of child's node tag)
-    Parent(Vec<(u8, Dptr)>),
+    Parent(Vec<(u8, Dp)>),
 }
 
 impl<'a> Iter<'a> {
-    fn seek_to(&mut self, dptr: Dptr) -> Result<Dptr> {
-        Ok(Dptr::from(
-            self.disktree_csr.seek(SeekFrom::Start(u64::from(dptr)))?,
-        ))
-    }
-
-    fn read_base_nodes(rdr: &mut Cursor<&[u8]>) -> Result<Vec<(u8, Dptr)>> {
+    pub(crate) fn read_base_nodes(rdr: &mut Cursor<&[u8]>) -> Result<Vec<(u8, Dp)>> {
         let mut buf = Vec::with_capacity(122);
-        rdr.seek(SeekFrom::Start(HDR_SZ))?;
+        rdr.seek(HDR_SZ.into())?;
         for digit in 0..122 {
-            let dptr = Dptr::read(rdr)?;
+            let dptr = Dp::read(rdr)?;
             if !dptr.is_null() {
                 buf.push((digit, dptr));
             }
@@ -44,15 +38,15 @@ impl<'a> Iter<'a> {
     }
 
     // `pos` is a position in the file of this node's tag.
-    fn read_node(&mut self, dptr: Dptr) -> Result<Node> {
-        let dptr = self.seek_to(dptr)?;
+    fn read_node(&mut self, dptr: Dp) -> Result<Node> {
+        let dptr = self.seek(dptr)?;
         let node_tag = self.disktree_csr.read_u8()?;
         if 0 == node_tag & 0b1000_0000 {
             Ok(Node::Leaf(dptr))
         } else {
             let mut children = self.node_buf();
             let n_children = (node_tag & 0b0111_1111).count_ones() as usize;
-            let child_dptrs = Dptr::read_n(&mut self.disktree_csr, n_children)?;
+            let child_dptrs = Dp::read_n(&mut self.disktree_csr, n_children)?;
             children.extend(
                 (0..7)
                     .rev()
@@ -67,7 +61,7 @@ impl<'a> Iter<'a> {
     /// allocates a new one.
     ///
     /// See [`Iter::recycle_node_buf`].
-    fn node_buf(&mut self) -> Vec<(u8, Dptr)> {
+    fn node_buf(&mut self) -> Vec<(u8, Dp)> {
         let buf = self
             .recycle_bin
             .pop()
@@ -79,7 +73,7 @@ impl<'a> Iter<'a> {
     /// Accepts a used, empty, node buffer for later reuse.
     ///
     /// See  [`Iter::node_buf`].
-    fn recycle_node_buf(&mut self, buf: Vec<(u8, Dptr)>) {
+    fn recycle_node_buf(&mut self, buf: Vec<(u8, Dp)>) {
         debug_assert!(buf.is_empty());
         self.recycle_bin.push(buf);
     }
@@ -150,9 +144,9 @@ impl<'a> Iterator for Iter<'a> {
                 }
                 Ok(Node::Leaf(dptr)) => {
                     self.curr_node = None;
-                    if let Err(e) = self.seek_to(dptr) {
+                    if let Err(e) = self.seek(dptr) {
                         self.stop_yielding();
-                        return Some(Err(e));
+                        return Some(Err(Error::from(e)));
                     }
                     match varint::read(&mut self.disktree_csr) {
                         Err(e) => {
@@ -172,5 +166,19 @@ impl<'a> Iterator for Iter<'a> {
             };
         }
         None
+    }
+}
+
+impl<'a> DtSeek for Iter<'a> {
+    fn pos(&mut self) -> std::io::Result<Dp> {
+        self.disktree_csr.pos()
+    }
+
+    fn seek(&mut self, dp: Dp) -> std::io::Result<Dp> {
+        self.disktree_csr.seek(dp)
+    }
+
+    fn fast_forward(&mut self) -> std::io::Result<Dp> {
+        self.disktree_csr.fast_forward()
     }
 }
