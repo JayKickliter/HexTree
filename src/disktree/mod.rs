@@ -211,4 +211,16 @@ mod tests {
             "iterating a disktree should yield identically ordered elements as the hextree tree it was derived from"
         );
     }
+
+    #[test]
+    fn test_empty_disktree() {
+        use crate::HexTreeMap;
+        use std::io::Cursor;
+        let mut wtr = vec![];
+        HexTreeMap::<&[u8]>::new()
+            .to_disktree(Cursor::new(&mut wtr), |wtr, val| wtr.write_all(val))
+            .unwrap();
+        let disktree = DiskTreeMap::with_buf(wtr).unwrap();
+        assert_eq!(0, disktree.iter().unwrap().count());
+    }
 }
