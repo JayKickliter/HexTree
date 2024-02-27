@@ -412,4 +412,47 @@ mod tests {
 
         assert_eq!(value_sum, expected_sum);
     }
+
+    #[test]
+    fn test_subtree_iter() {
+        use crate::{compaction::NullCompactor, Cell, HexTreeMap};
+        use h3o::{CellIndex, Resolution};
+        use std::convert::TryFrom;
+
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a47ffffff
+        let monaco_res6_cellidx = CellIndex::try_from(0x863969a47ffffff).unwrap();
+        let monaco_res6_cell = Cell::try_from(u64::from(monaco_res6_cellidx)).unwrap();
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a6fffffff
+        let not_monaco_res6_cellidx = CellIndex::try_from(0x863969a6fffffff).unwrap();
+
+        let monaco_res10_cells = monaco_res6_cellidx
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let not_monaco_res10_cells = not_monaco_res6_cellidx
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let monaco_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .copied()
+            .zip(std::iter::repeat(()))
+            .collect();
+
+        let combined_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .chain(not_monaco_res10_cells.iter())
+            .copied()
+            .zip(std::iter::repeat(()))
+            .collect();
+
+        let monaco_hextree_collect = monaco_hextree.iter().map(|item| item.0).collect::<Vec<_>>();
+        let combined_subtree_collect = combined_hextree
+            .subtree_iter(monaco_res6_cell)
+            .map(|item| item.0)
+            .collect::<Vec<_>>();
+        assert_eq!(monaco_hextree_collect, combined_subtree_collect);
+    }
 }
