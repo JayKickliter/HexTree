@@ -7,7 +7,7 @@ use crate::{compaction::Compactor, digits::Digits, Cell};
 //
 // The benefit of storing indices is vastly simpler Cell+Value
 // iteration of a tree.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(align(64))]
 pub(crate) enum Node<V> {
@@ -103,45 +103,22 @@ impl<V> Node<V> {
         }
     }
 
-    pub(crate) fn get(&self, res: u8, cell: Cell, mut digits: Digits) -> Option<(Cell, &V)> {
-        match (digits.next(), self) {
-            (None, Self::Leaf(val)) => Some((cell, val)),
-            (Some(_), Self::Leaf(val)) => {
-                Some((cell.to_parent(res).expect("invalid condition"), val))
-            }
-            (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
-                Some(node) => node.get(res + 1, cell, digits),
-                None => None,
-            },
-            // No digits left, but `self` isn't full, so this cell
-            // can't fully contain the target.
-            (None, Self::Parent(_)) => None,
-        }
-    }
-
-    /// Returns a raw [`Node`] for `cell`, if present.
-    ///
-    /// Unlike the public [`Node::get`], this function returns [`Some`] for
-    /// parent nodes.
-    pub(crate) fn get_raw(
-        &self,
-        res: u8,
-        cell: Cell,
-        mut digits: Digits,
-    ) -> Option<(Cell, &Node<V>)> {
+    #[inline]
+    pub(crate) fn get(&self, res: u8, cell: Cell, mut digits: Digits) -> Option<(Cell, &Node<V>)> {
         match (digits.next(), self) {
             (None, _) => Some((cell, self)),
             (Some(_), Self::Leaf(_)) => {
                 Some((cell.to_parent(res).expect("invalid condition"), self))
             }
             (Some(digit), Self::Parent(children)) => match &children.as_slice()[digit as usize] {
-                Some(node) => node.get_raw(res + 1, cell, digits),
+                Some(node) => node.get(res + 1, cell, digits),
                 None => None,
             },
         }
     }
 
-    pub(crate) fn get_raw_mut(
+    #[inline]
+    pub(crate) fn get_mut(
         &mut self,
         res: u8,
         cell: Cell,
@@ -154,33 +131,10 @@ impl<V> Node<V> {
             }
             (Some(digit), Self::Parent(ref mut children)) => {
                 match children.as_mut_slice()[digit as usize].as_deref_mut() {
-                    Some(node) => node.get_raw_mut(res + 1, cell, digits),
-                    None => None,
-                }
-            }
-        }
-    }
-
-    pub(crate) fn get_mut(
-        &mut self,
-        res: u8,
-        cell: Cell,
-        mut digits: Digits,
-    ) -> Option<(Cell, &mut V)> {
-        match (digits.next(), self) {
-            (None, Self::Leaf(val)) => Some((cell, val)),
-            (Some(_), Self::Leaf(val)) => {
-                Some((cell.to_parent(res).expect("invalid condition"), val))
-            }
-            (Some(digit), Self::Parent(children)) => {
-                match &mut children.as_mut_slice()[digit as usize] {
                     Some(node) => node.get_mut(res + 1, cell, digits),
                     None => None,
                 }
             }
-            // No digits left, but `self` isn't full, so this cell
-            // can't fully contain the target.
-            (None, Self::Parent(_)) => None,
         }
     }
 }

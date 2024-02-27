@@ -10,7 +10,6 @@ use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
     marker::Send,
-    ops::Range,
     path::Path,
 };
 
@@ -62,6 +61,16 @@ impl DiskTreeMap {
 
     /// Returns `(Cell, &[u8])`, if present.
     pub fn get(&self, cell: Cell) -> Result<Option<(Cell, &[u8])>> {
+        if let Some((cell, Node::Leaf(range))) = self.get_raw(cell)? {
+            let val_bytes = &(*self.0).as_ref()[range];
+            Ok(Some((cell, val_bytes)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns `(Cell, Node)`, if present.
+    pub(crate) fn get_raw(&self, cell: Cell) -> Result<Option<(Cell, Node)>> {
         let base_cell_pos = Self::base_cell_dptr(cell);
         let mut csr = Cursor::new((*self.0).as_ref());
         csr.seek(SeekFrom::Start(base_cell_pos.into()))?;
@@ -70,11 +79,28 @@ impl DiskTreeMap {
             return Ok(None);
         }
         let digits = Digits::new(cell);
-        if let Some((cell, range)) = Self::_get(&mut csr, 0, node_dptr, cell, digits)? {
-            let val_bytes = &(*self.0).as_ref()[range];
-            Ok(Some((cell, val_bytes)))
-        } else {
-            Ok(None)
+        Self::_get_raw(&mut csr, 0, node_dptr, cell, digits)
+    }
+
+    fn _get_raw(
+        csr: &mut Cursor<&[u8]>,
+        res: u8,
+        node_dptr: Dp,
+        cell: Cell,
+        mut digits: Digits,
+    ) -> Result<Option<(Cell, Node)>> {
+        csr.seek(SeekFrom::Start(node_dptr.into()))?;
+        let node = Node::read(csr)?;
+        match (digits.next(), &node) {
+            (None, _) => Ok(Some((cell, node))),
+            (Some(_), Node::Leaf(_)) => Ok(Some((
+                cell.to_parent(res).expect("invalid condition"),
+                node,
+            ))),
+            (Some(digit), Node::Parent(children)) => match children[digit as usize] {
+                None => Ok(None),
+                Some(dptr) => Self::_get_raw(csr, res + 1, dptr, cell, digits),
+            },
         }
     }
 
@@ -87,31 +113,6 @@ impl DiskTreeMap {
     /// arbitrary order.
     pub fn iter(&self) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
         Iter::new((*self.0).as_ref())
-    }
-
-    fn _get(
-        csr: &mut Cursor<&[u8]>,
-        res: u8,
-        node_dptr: Dp,
-        cell: Cell,
-        mut digits: Digits,
-    ) -> Result<Option<(Cell, Range<usize>)>> {
-        csr.seek(SeekFrom::Start(node_dptr.into()))?;
-        let node = Node::read(csr)?;
-        match (digits.next(), node) {
-            (None, Node::Leaf(range)) => Ok(Some((cell, range))),
-            (Some(_), Node::Leaf(range)) => Ok(Some((
-                cell.to_parent(res).expect("invalid condition"),
-                range,
-            ))),
-            (Some(digit), Node::Parent(children)) => match children[digit as usize] {
-                None => Ok(None),
-                Some(dptr) => Self::_get(csr, res + 1, dptr, cell, digits),
-            },
-            // No digits left, but `self` isn't full, so this cell
-            // can't fully contain the target.
-            (None, _) => Ok(None),
-        }
     }
 
     /// Returns the DPtr to a base (res0) cell dptr.
