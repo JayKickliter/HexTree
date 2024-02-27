@@ -57,8 +57,22 @@ mod tests {
             .unwrap();
         let monaco_disktree = DiskTreeMap::open(path).unwrap();
 
-        assert_eq!(monaco.get(point_2).unzip().1, None);
-        assert_eq!(monaco.get(point_1).unzip().1, Some(&Region::Monaco));
+        assert_eq!(monaco.get(point_2), None);
+        assert_eq!(
+            monaco.get(point_1),
+            Some((point_1.to_parent(9).unwrap(), &Region::Monaco))
+        );
+
+        let point_1_res8 = point_1.to_parent(8).unwrap();
+        assert!(matches!(
+            monaco.get_raw(point_1_res8),
+            Some((cell, crate::node::Node::Parent(_))) if cell == point_1_res8
+        ));
+
+        assert!(matches!(
+            monaco_disktree.get_raw(point_1_res8).unwrap(),
+            Some((cell, crate::disktree::node::Node::Parent(_))) if cell == point_1_res8
+        ));
 
         for (ht_cell, &ht_val) in monaco.iter() {
             let now = std::time::Instant::now();

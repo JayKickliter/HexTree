@@ -172,7 +172,16 @@ impl<V, C> HexTreeMap<V, C> {
     ///
     /// Note that this method also returns a Cell, which may be a
     /// parent of the target cell provided.
+    #[inline]
     pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
+        match self.get_raw(cell) {
+            Some((cell, Node::Leaf(val))) => Some((cell, val)),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn get_raw(&self, cell: Cell) -> Option<(Cell, &Node<V>)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
@@ -188,7 +197,16 @@ impl<V, C> HexTreeMap<V, C> {
     ///
     /// Note that this method also returns a Cell, which may be a
     /// parent of the target cell provided.
+    #[inline]
     pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
+        match self.get_raw_mut(cell) {
+            Some((cell, &mut Node::Leaf(ref mut val))) => Some((cell, val)),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn get_raw_mut(&mut self, cell: Cell) -> Option<(Cell, &mut Node<V>)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
@@ -231,7 +249,7 @@ impl<V, C> HexTreeMap<V, C> {
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
                 let digits = Digits::new(cell);
-                match node.get_raw(0, cell, digits) {
+                match node.get(0, cell, digits) {
                     Some((cell, Node::Leaf(val))) => Some((cell, val))
                         .into_iter()
                         .chain(crate::iteration::Iter::empty()),
@@ -252,7 +270,7 @@ impl<V, C> HexTreeMap<V, C> {
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {
                 let digits = Digits::new(cell);
-                match node.get_raw_mut(0, cell, digits) {
+                match node.get_mut(0, cell, digits) {
                     Some((cell, Node::Leaf(val))) => Some((cell, val))
                         .into_iter()
                         .chain(crate::iteration::IterMut::empty()),

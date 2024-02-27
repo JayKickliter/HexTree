@@ -8,6 +8,7 @@ use std::{io::Read, mem::size_of, ops::Range};
 // Enough bytes to read node tag and 7 child dptrs.
 const NODE_BUF_SZ: usize = size_of::<u8>() + 7 * Dp::size();
 
+#[derive(Debug)]
 pub(crate) enum Node {
     // value_begin..value_end
     Leaf(Range<usize>),
