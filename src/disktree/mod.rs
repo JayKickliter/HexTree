@@ -71,7 +71,7 @@ mod tests {
 
         assert!(matches!(
             monaco_disktree.get_raw(point_1_res8).unwrap(),
-            Some((cell, crate::disktree::node::Node::Parent(_))) if cell == point_1_res8
+            Some((cell, _, crate::disktree::node::Node::Parent(_))) if cell == point_1_res8
         ));
 
         for (ht_cell, &ht_val) in monaco.iter() {
@@ -236,5 +236,80 @@ mod tests {
             .unwrap();
         let disktree = DiskTreeMap::with_buf(wtr).unwrap();
         assert_eq!(0, disktree.iter().unwrap().count());
+    }
+
+    #[test]
+    fn test_descendants() {
+        use crate::{compaction::NullCompactor, Cell, HexTreeMap};
+        use h3o::{CellIndex, Resolution};
+        use std::{convert::TryFrom, io::Cursor};
+
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a47ffffff
+        let monaco_res6_ci = CellIndex::try_from(0x863969a47ffffff).unwrap();
+        let monaco_res6_cell = Cell::try_from(u64::from(monaco_res6_ci)).unwrap();
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a6fffffff
+        let not_monaco_res6_ci = CellIndex::try_from(0x863969a6fffffff).unwrap();
+
+        let monaco_res10_cells = monaco_res6_ci
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let not_monaco_res10_cells = not_monaco_res6_ci
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let monaco_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .copied()
+            .map(|cell| (cell, ()))
+            .collect();
+
+        let combined_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .chain(not_monaco_res10_cells.iter())
+            .copied()
+            .map(|cell| (cell, ()))
+            .collect();
+
+        let combined_disktree = {
+            let mut combined_disktree_buf = vec![];
+            combined_hextree
+                .to_disktree(Cursor::new(&mut combined_disktree_buf), |wtr, ()| {
+                    wtr.write_all(&[])
+                })
+                .unwrap();
+            DiskTreeMap::with_buf(combined_disktree_buf).unwrap()
+        };
+
+        // Ensure calling `descendants` on leaf returns only a single
+        // item iterator of the leaf.
+        for (hextree_leaf, _) in combined_hextree.iter() {
+            let leaf_vec = combined_disktree
+                .descendants(hextree_leaf)
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            assert_eq!(
+                leaf_vec.len(),
+                1,
+                "Iterator must have extactly one element for a leaf"
+            );
+            assert_eq!(hextree_leaf, leaf_vec[0].0);
+        }
+
+        assert_eq!(
+            combined_hextree.len(),
+            combined_disktree.iter().unwrap().count()
+        );
+
+        let combined_collect = combined_disktree
+            .descendants(monaco_res6_cell)
+            .unwrap()
+            .map(|item| item.unwrap().0)
+            .collect::<Vec<_>>();
+        let monaco_hextree_collect = monaco_hextree.iter().map(|item| item.0).collect::<Vec<_>>();
+        assert_eq!(combined_collect, monaco_hextree_collect);
     }
 }

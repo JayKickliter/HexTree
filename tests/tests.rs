@@ -59,7 +59,7 @@ fn all_up() {
     for expected in us915_cells.iter().filter(|cell| cell.res() > 0) {
         let parent_to_expected = expected.to_parent(expected.res() - 1).unwrap();
         let subtree = us915_tree
-            .subtree_iter(parent_to_expected)
+            .descendants(parent_to_expected)
             .map(|(cell, _)| cell);
         let subcells = subtree.collect::<Vec<Cell>>();
         assert_ne!(subcells.len(), 0);
@@ -87,7 +87,7 @@ fn all_up() {
 
     let subtree_cells = {
         let mut subtree_cells = us915_tree
-            .subtree_iter(northeast_res1)
+            .descendants(northeast_res1)
             .map(|(cell, _)| cell)
             .collect::<Vec<Cell>>();
         subtree_cells.sort_by_key(|cell| cell.into_raw());
