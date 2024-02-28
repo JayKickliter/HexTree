@@ -237,4 +237,63 @@ mod tests {
         let disktree = DiskTreeMap::with_buf(wtr).unwrap();
         assert_eq!(0, disktree.iter().unwrap().count());
     }
+
+    #[test]
+    fn test_subtree_iter() {
+        use crate::{compaction::NullCompactor, Cell, HexTreeMap};
+        use h3o::{CellIndex, Resolution};
+        use std::{convert::TryFrom, io::Cursor};
+
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a47ffffff
+        let monaco_res6_ci = CellIndex::try_from(0x863969a47ffffff).unwrap();
+        let monaco_res6_cell = Cell::try_from(u64::from(monaco_res6_ci)).unwrap();
+        // https://wolf-h3-viewer.glitch.me/?h3=863969a6fffffff
+        let not_monaco_res6_ci = CellIndex::try_from(0x863969a6fffffff).unwrap();
+
+        let monaco_res10_cells = monaco_res6_ci
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let not_monaco_res10_cells = not_monaco_res6_ci
+            .children(Resolution::Ten)
+            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .collect::<Vec<_>>();
+
+        let monaco_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .copied()
+            .map(|cell| (cell, ()))
+            .collect();
+
+        let combined_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
+            .iter()
+            .chain(not_monaco_res10_cells.iter())
+            .copied()
+            .map(|cell| (cell, ()))
+            .collect();
+
+        let combined_disktree = {
+            let mut combined_disktree_buf = vec![];
+            combined_hextree
+                .to_disktree(Cursor::new(&mut combined_disktree_buf), |wtr, ()| {
+                    wtr.write_all(&[])
+                })
+                .unwrap();
+            DiskTreeMap::with_buf(combined_disktree_buf).unwrap()
+        };
+
+        assert_eq!(
+            combined_hextree.len(),
+            combined_disktree.iter().unwrap().count()
+        );
+
+        let combined_disktree_subtree_collect = combined_disktree
+            .subtree_iter(monaco_res6_cell)
+            .unwrap()
+            .map(|item| item.unwrap().0)
+            .collect::<Vec<_>>();
+        let monaco_hextree_collect = monaco_hextree.iter().map(|item| item.0).collect::<Vec<_>>();
+        assert_eq!(combined_disktree_subtree_collect, monaco_hextree_collect);
+    }
 }

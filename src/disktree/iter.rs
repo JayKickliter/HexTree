@@ -106,6 +106,43 @@ impl<'a> Iter<'a> {
             node_stack,
         })
     }
+
+    pub(crate) fn empty(disktree_buf: &'a [u8]) -> Iter<'a> {
+        let disktree_csr = Cursor::new(disktree_buf);
+        let cell_stack = CellStack::new();
+        let node_stack = Vec::new();
+        let recycle_bin = Vec::new();
+        let curr_node = None;
+        Self {
+            cell_stack,
+            curr_node,
+            disktree_buf,
+            disktree_csr,
+            recycle_bin,
+            node_stack,
+        }
+    }
+
+    // pub(crate) fn subtree(disktree: &'a DiskTreeMap, cell: Cell) -> Result<Iter<'a>> {
+    //     let mut disktree_csr = Cursor::new(disktree_buf);
+    //     let mut cell_stack = CellStack::new();
+    //     let mut node_stack = Vec::new();
+    //     let recycle_bin = Vec::new();
+    //     let mut base_nodes = Self::read_base_nodes(&mut disktree_csr)?;
+    //     let curr_node = base_nodes.pop();
+    //     node_stack.push(base_nodes);
+    //     if let Some((digit, _)) = curr_node {
+    //         cell_stack.push(digit);
+    //     }
+    //     Ok(Self {
+    //         cell_stack,
+    //         curr_node,
+    //         disktree_buf,
+    //         disktree_csr,
+    //         recycle_bin,
+    //         node_stack,
+    //     })
+    // }
 }
 
 impl<'a> Iterator for Iter<'a> {
