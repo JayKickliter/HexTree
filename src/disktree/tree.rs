@@ -116,8 +116,24 @@ impl DiskTreeMap {
     }
 
     /// Returns an iterator visiting the specified `cell` or its descendants.
-    pub fn subtree_iter(&self, _cell: Cell) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
-        Ok(None.into_iter())
+    pub fn subtree_iter(&self, cell: Cell) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
+        let iter = match self.get_raw(cell)? {
+            None => {
+                let iter = crate::disktree::iter::Iter::empty((*self.0).as_ref());
+                None.into_iter().chain(iter)
+            }
+            Some((cell, Node::Leaf(range))) => {
+                let iter = crate::disktree::iter::Iter::empty((*self.0).as_ref());
+                let val_bytes = &(*self.0).as_ref()[range];
+                Some(Ok((cell, val_bytes))).into_iter().chain(iter)
+            }
+            Some((cell, Node::Parent(children))) => {
+                let iter = crate::disktree::iter::Iter::empty((*self.0).as_ref());
+                let val_bytes = &(*self.0).as_ref()[range];
+                Some(Ok((cell, val_bytes))).into_iter().chain(iter)
+            }
+        };
+        Ok(iter)
     }
 
     /// Returns the DPtr to a base (res0) cell dptr.
