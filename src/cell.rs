@@ -225,6 +225,14 @@ impl TryFrom<u64> for Cell {
     }
 }
 
+impl TryFrom<i64> for Cell {
+    type Error = Error;
+
+    fn try_from(raw: i64) -> Result<Cell> {
+        Cell::from_raw(raw as u64)
+    }
+}
+
 /// A type for building up Cells in an iterative matter when
 /// tree-walking.
 pub(crate) struct CellStack(Option<Cell>);
@@ -351,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_cell_to_parent() {
-        let cell = Cell::try_from(0x85283473fffffff).unwrap();
+        let cell = Cell::from_raw(0x85283473fffffff).unwrap();
         let parent = cell.to_parent(cell.res()).unwrap();
         assert_eq!(cell, parent);
         let parent = cell.to_parent(4).unwrap();

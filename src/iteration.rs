@@ -210,19 +210,18 @@ mod tests {
         geom::{ContainmentMode, PolyfillConfig, Polygon, ToCells},
         CellIndex, Resolution,
     };
-    use std::convert::TryFrom;
 
     #[test]
     fn test_visit() {
-        let parent = Cell::try_from(0x825997fffffffff).unwrap();
+        let parent = Cell::from_raw(0x825997fffffffff).unwrap();
         let children = [
-            Cell::try_from(0x835990fffffffff).unwrap(),
-            Cell::try_from(0x835991fffffffff).unwrap(),
-            Cell::try_from(0x835992fffffffff).unwrap(),
-            Cell::try_from(0x835993fffffffff).unwrap(),
-            Cell::try_from(0x835994fffffffff).unwrap(),
-            Cell::try_from(0x835995fffffffff).unwrap(),
-            Cell::try_from(0x835996fffffffff).unwrap(),
+            Cell::from_raw(0x835990fffffffff).unwrap(),
+            Cell::from_raw(0x835991fffffffff).unwrap(),
+            Cell::from_raw(0x835992fffffffff).unwrap(),
+            Cell::from_raw(0x835993fffffffff).unwrap(),
+            Cell::from_raw(0x835994fffffffff).unwrap(),
+            Cell::from_raw(0x835995fffffffff).unwrap(),
+            Cell::from_raw(0x835996fffffffff).unwrap(),
         ];
 
         let hexmap: HexTreeMap<Cell> = children.iter().map(|cell| (cell, cell)).collect();
@@ -243,7 +242,7 @@ mod tests {
             let mut map = HexTreeMap::new();
             for cell in COMPACT_US915_INDICES
                 .iter()
-                .map(|&idx| Cell::try_from(idx).unwrap())
+                .map(|&idx| Cell::from_raw(idx).unwrap())
             {
                 map.insert(cell, cell);
             }
@@ -262,7 +261,7 @@ mod tests {
             let mut map = HexTreeMap::new();
             for cell in COMPACT_US915_INDICES
                 .iter()
-                .map(|&idx| Cell::try_from(idx).unwrap())
+                .map(|&idx| Cell::from_raw(idx).unwrap())
             {
                 map.insert(cell, cell);
             }
@@ -283,7 +282,7 @@ mod tests {
             let mut cell_value_pairs: Vec<(Cell, i32)> = Vec::new();
             let mut count = 0;
             while let Ok(idx) = rdr.read_u64::<LE>() {
-                cell_value_pairs.push((Cell::try_from(idx).unwrap(), count));
+                cell_value_pairs.push((Cell::from_raw(idx).unwrap(), count));
                 count += 1;
             }
             cell_value_pairs
@@ -367,7 +366,7 @@ mod tests {
             eiffel_tower_cells.dedup();
             eiffel_tower_cells
                 .into_iter()
-                .map(|cell| Cell::try_from(u64::from(cell)).unwrap())
+                .map(|cell| Cell::from_raw(u64::from(cell)).unwrap())
                 .collect::<Vec<Cell>>()
         };
         let mut hex_map: HexTreeMap<i32> = eiffel_tower_cells
@@ -375,7 +374,7 @@ mod tests {
             .enumerate()
             .map(|(i, &cell)| (cell, i as i32))
             .collect();
-        let eiffel_tower_res1_parent = Cell::try_from(0x811fbffffffffff).unwrap();
+        let eiffel_tower_res1_parent = Cell::from_raw(0x811fbffffffffff).unwrap();
         let value_sum: i32 = hex_map
             .subtree_iter(eiffel_tower_res1_parent)
             .map(|(_cell, val)| val)
@@ -383,8 +382,8 @@ mod tests {
         // Establish the sum of map values in the eiffel tower block.
         assert_eq!(value_sum, 22578);
 
-        let west_mask_res9 = Cell::try_from(0x891fb46741bffff).unwrap();
-        let east_mask_res9 = Cell::try_from(0x891fb467413ffff).unwrap();
+        let west_mask_res9 = Cell::from_raw(0x891fb46741bffff).unwrap();
+        let east_mask_res9 = Cell::from_raw(0x891fb467413ffff).unwrap();
         let west_value_sum: i32 = hex_map
             .subtree_iter(west_mask_res9)
             .map(|(_cell, val)| val)
@@ -421,18 +420,18 @@ mod tests {
 
         // https://wolf-h3-viewer.glitch.me/?h3=863969a47ffffff
         let monaco_res6_cellidx = CellIndex::try_from(0x863969a47ffffff).unwrap();
-        let monaco_res6_cell = Cell::try_from(u64::from(monaco_res6_cellidx)).unwrap();
+        let monaco_res6_cell = Cell::from_raw(u64::from(monaco_res6_cellidx)).unwrap();
         // https://wolf-h3-viewer.glitch.me/?h3=863969a6fffffff
         let not_monaco_res6_cellidx = CellIndex::try_from(0x863969a6fffffff).unwrap();
 
         let monaco_res10_cells = monaco_res6_cellidx
             .children(Resolution::Ten)
-            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .map(|ci| Cell::from_raw(u64::from(ci)).unwrap())
             .collect::<Vec<_>>();
 
         let not_monaco_res10_cells = not_monaco_res6_cellidx
             .children(Resolution::Ten)
-            .map(|ci| Cell::try_from(u64::from(ci)).unwrap())
+            .map(|ci| Cell::from_raw(u64::from(ci)).unwrap())
             .collect::<Vec<_>>();
 
         let monaco_hextree: HexTreeMap<(), NullCompactor> = monaco_res10_cells
