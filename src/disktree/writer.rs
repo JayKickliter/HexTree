@@ -1,12 +1,12 @@
 use crate::{
     compaction::Compactor,
-    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_MAGIC, varint},
+    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_MAGIC, varint, DiskTreeMap},
     error::{Error, Result},
     node::Node,
     HexTreeMap,
 };
 use byteorder::WriteBytesExt;
-use std::io::Write;
+use std::io::{Cursor, Write};
 
 impl<V, C> HexTreeMap<V, C>
 where
@@ -67,6 +67,76 @@ where
             let node_dptr = self.write_node(node, &mut f)?;
             self.seek(fixee_dptr)?;
             node_dptr.write(&mut self.wtr)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn merge<F, E>(&mut self, subtrees: &[DiskTreeMap], mut f: F) -> Result
+    where
+        F: FnMut(&mut dyn Write, &&[u8]) -> std::result::Result<(), E>,
+        E: std::error::Error + Sync + Send + 'static,
+    {
+        {
+            // Write magic string
+            self.wtr.write_all(HDR_MAGIC)?;
+            // Write version field
+            const VERSION: u8 = 0;
+            self.wtr.write_u8(0xFE - VERSION)?;
+        }
+
+        {
+            // We currently need to read the incoming disktrees to memory
+            // before writing them out. This creates a lifetime problem
+            // where we have to do res0 fixups immediately after writing a
+            // res0 node. Therefore, to ensure offsets are correct, we pad
+            // out the file to make sure we don't write over
+            // not-yet-written res0 base offsets.
+            let pos = self.pos()?;
+            self.wtr.write_all(&vec![0; 122 * Dp::size()])?;
+            self.seek(pos)?;
+        }
+
+        let root_disk_trees = {
+            let mut root_disk_trees: Box<[Option<&DiskTreeMap>]> = (0..122).map(|_| None).collect();
+            for disktree in subtrees {
+                let tree_roots = crate::disktree::iter::Iter::read_base_nodes(&mut Cursor::new(
+                    (*disktree.0).as_ref(),
+                ))?;
+                if !tree_roots.is_empty() {
+                    assert!(root_disk_trees[tree_roots[0].0 as usize].is_none());
+                    root_disk_trees[tree_roots[0].0 as usize] = Some(disktree);
+                }
+            }
+            root_disk_trees
+        };
+
+        for (idx, maybe_disktree) in root_disk_trees.iter().enumerate() {
+            match maybe_disktree {
+                None => Dp::null().write(&mut self.wtr)?,
+                Some(disktree) => {
+                    let mut fixups: Vec<(Dp, &Node<&[u8]>)> = Vec::new();
+                    let mut hextree: HexTreeMap<&[u8]> = HexTreeMap::new();
+                    for res in disktree.iter()? {
+                        let (cell, val) = res?;
+                        hextree.insert(cell, val);
+                    }
+                    if let Some(node) = hextree
+                        .nodes
+                        .get(idx)
+                        .expect("we already determined this node should exist")
+                        .as_deref()
+                    {
+                        fixups.push((self.pos()?, node));
+                        Dp::null().write(&mut self.wtr)?
+                    }
+                    for (fixee_dptr, node) in fixups {
+                        let node_dptr = self.write_node(node, &mut f)?;
+                        self.seek(fixee_dptr)?;
+                        node_dptr.write(&mut self.wtr)?;
+                    }
+                }
+            }
         }
 
         Ok(())
