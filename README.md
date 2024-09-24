@@ -7,8 +7,8 @@ with [H3 cell]s.
 
 The primary structures are:
 
-- **HexTreeMap**: an H3 cell-to-value map.
-- **HexTreeSet**: an H3 cell set for hit-testing.
+- [**HexTreeMap**]: an H3 cell-to-value map.
+- [**HexTreeSet**]: an H3 cell set for hit-testing.
 
 You can think of `HexTreeMap` vs. `HexTreeSet` as [`HashMap`] vs. [`HashSet`].
 
@@ -40,6 +40,8 @@ the same as its corresponding H3 cell resolution.
 [serde]: https://docs.rs/serde/latest/serde
 [compaction]: crate::compaction
 [us915]: https://www.google.com/maps/d/u/0/edit?mid=15wRzxmtmyzqf6fHU3yuW4hJAM9MoxLJs
+[**HexTreeMap**]: crate::HexTreeMap
+[**HexTreeSet**]: crate::HexTreeSet
 
 ## License
 
