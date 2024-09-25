@@ -1,12 +1,5 @@
 use crate::{compaction::Compactor, digits::Digits, Cell};
 
-// TODO: storing indices in nodes is not necessary, since the index
-// can always be derived by the path through the tree to get to the
-// node. That said, storing the index doesn't impose much lookup
-// overhead.
-//
-// The benefit of storing indices is vastly simpler Cell+Value
-// iteration of a tree.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(align(64))]
