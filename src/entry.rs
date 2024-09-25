@@ -176,8 +176,7 @@ where
             }) => cell_value,
             Entry::Vacant(VacantEntry { target_cell, map }) => {
                 map.insert(target_cell, Default::default());
-                // We just inserted; unwrap is fine.
-                map.get_mut(target_cell).unwrap()
+                map.get_mut(target_cell).expect("we just inserted")
             }
         }
     }

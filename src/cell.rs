@@ -212,8 +212,13 @@ impl Cell {
     #[inline]
     pub fn is_related_to(&self, other: &Self) -> bool {
         let common_res = std::cmp::min(self.res(), other.res());
-        // Unwrap is fine. We already checked to the min common resolution.
-        self.to_parent(common_res).unwrap() == other.to_parent(common_res).unwrap()
+        let promoted_self = self
+            .to_parent(common_res)
+            .expect("we already checked to the min common resolution");
+        let promoted_other = other
+            .to_parent(common_res)
+            .expect("we already checked to the min common resolution");
+        promoted_self == promoted_other
     }
 }
 
