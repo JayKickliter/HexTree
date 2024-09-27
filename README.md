@@ -39,7 +39,7 @@ the same as its corresponding H3 cell resolution.
 [H3 cell]: https://h3geo.org/docs/core-library/h3Indexing
 [serde]: https://docs.rs/serde/latest/serde
 [compaction]: crate::compaction
-[us915]: https://www.google.com/maps/d/u/0/edit?mid=15wRzxmtmyzqf6fHU3yuW4hJAM9MoxLJs
+[us915]: https://kepler.gl/demo?mapUrl=https://gist.githubusercontent.com/JayKickliter/8f91a8437b7dd89321b22cde50e71c3a/raw/4aafc62303d913edf58ac1bb7b3b656c8df188a1/us915.kepler.json
 [**HexTreeMap**]: crate::HexTreeMap
 [**HexTreeSet**]: crate::HexTreeSet
 

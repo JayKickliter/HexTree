@@ -9,7 +9,7 @@ use std::iter::FromIterator;
 ///
 /// # Usage
 ///
-/// <iframe src="https://www.google.com/maps/d/u/0/embed?mid=1Ty1LhqAipSTl6lsXH7YAjE6kdNmEvCw&ehbc=2E312F" width="100%" height="480"></iframe>
+/// <iframe src="https://kepler.gl/demo?mapUrl=https://gist.githubusercontent.com/JayKickliter/8f91a8437b7dd89321b22cde50e71c3a/raw/a60c83cb15e75aba660fb6535d8e0061fa504205/monaco.kepler.json" width="100%" height="600"></iframe>
 ///
 /// ----
 ///
