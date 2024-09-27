@@ -34,21 +34,12 @@ the same as its corresponding H3 cell resolution.
 
 * **`serde`**: support for serialization via [serde].
 
-[`HashMap`]: https://doc.rust-lang.org/std/collections/struct.HashMap.html
-[`HashSet`]: https://doc.rust-lang.org/std/collections/struct.HashSet.html
-[H3 cell]: https://h3geo.org/docs/core-library/h3Indexing
-[serde]: https://docs.rs/serde/latest/serde
-[compaction]: crate::compaction
-[us915]: https://kepler.gl/demo?mapUrl=https://gist.githubusercontent.com/JayKickliter/8f91a8437b7dd89321b22cde50e71c3a/raw/4aafc62303d913edf58ac1bb7b3b656c8df188a1/us915.kepler.json
-[**HexTreeMap**]: crate::HexTreeMap
-[**HexTreeSet**]: crate::HexTreeSet
-
 ## License
 
 Licensed under either of
 
- * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+ * Apache License, Version 2.0 ([LICENSE-APACHE] or <http://www.apache.org/licenses/LICENSE-2.0>)
+ * MIT license ([LICENSE-MIT] or <http://opensource.org/licenses/MIT>)
 
 at your option.
 
@@ -58,3 +49,15 @@ Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the
 Apache-2.0 license, shall be dual licensed as above, without any
 additional terms or conditions.
+
+
+[`HashMap`]: https://doc.rust-lang.org/std/collections/struct.HashMap.html
+[`HashSet`]: https://doc.rust-lang.org/std/collections/struct.HashSet.html
+[H3 cell]: https://h3geo.org/docs/core-library/h3Indexing
+[serde]: https://docs.rs/serde/latest/serde
+[compaction]: crate::compaction
+[us915]: https://kepler.gl/demo?mapUrl=https://gist.githubusercontent.com/JayKickliter/8f91a8437b7dd89321b22cde50e71c3a/raw/4aafc62303d913edf58ac1bb7b3b656c8df188a1/us915.kepler.json
+[**HexTreeMap**]: crate::HexTreeMap
+[**HexTreeSet**]: crate::HexTreeSet
+[LICENSE-APACHE]: https://github.com/JayKickliter/HexTree/blob/main/LICENSE-APACHE
+[LICENSE-MIT]: https://github.com/JayKickliter/HexTree/blob/main/LICENSE-MIT
