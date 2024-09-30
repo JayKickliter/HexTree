@@ -1,12 +1,12 @@
 //! An on-disk hextree.
 
 #[cfg(not(target_pointer_width = "64"))]
-compile_warning!("disktree may silently fail on non-64bit systems");
+compile_warning!("hexdb may silently fail on non-64bit systems");
 
-pub use tree::DiskTreeMap;
+pub use tree::HexDb;
 
+mod dbseek;
 mod dptr;
-mod dtseek;
 mod iter;
 mod node;
 mod tree;
@@ -51,11 +51,11 @@ mod tests {
 
         let file = tempfile::NamedTempFile::new().unwrap();
         let (mut file, path) = file.keep().unwrap();
-        println!("disktree path: {path:?}");
+        println!("hexdb path: {path:?}");
         monaco
-            .to_disktree(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
+            .to_hexdb(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
             .unwrap();
-        let monaco_disktree = DiskTreeMap::open(path).unwrap();
+        let monaco_hexdb = HexDb::open(path).unwrap();
 
         assert_eq!(monaco.get(point_2), None);
         assert_eq!(
@@ -70,13 +70,13 @@ mod tests {
         ));
 
         assert!(matches!(
-            monaco_disktree.get_raw(point_1_res8).unwrap(),
-            Some((cell, crate::disktree::node::Node::Parent(_))) if cell == point_1_res8
+            monaco_hexdb.get_raw(point_1_res8).unwrap(),
+            Some((cell, crate::hexdb::node::Node::Parent(_))) if cell == point_1_res8
         ));
 
         for (ht_cell, &ht_val) in monaco.iter() {
             let now = std::time::Instant::now();
-            let (dt_cell, val_buf) = monaco_disktree.get(ht_cell).unwrap().unwrap();
+            let (dt_cell, val_buf) = monaco_hexdb.get(ht_cell).unwrap().unwrap();
             let dt_val = bincode::deserialize_from(val_buf).unwrap();
             let lookup_duration = now.elapsed();
             println!("loookup of {dt_cell} took {lookup_duration:?}");
@@ -141,34 +141,34 @@ mod tests {
             map
         };
 
-        let monaco_disktree: DiskTreeMap = {
+        let monaco_hexdb: HexDb = {
             let file = tempfile::NamedTempFile::new().unwrap();
             let (mut file, path) = file.keep().unwrap();
             monaco_hextree
-                .to_disktree(&mut file, |wtr, val| wtr.write_all(val))
+                .to_hexdb(&mut file, |wtr, val| wtr.write_all(val))
                 .unwrap();
             let _ = file;
-            DiskTreeMap::open(path).unwrap()
+            HexDb::open(path).unwrap()
         };
 
-        // Assert neither hashmap nor disktree contain reserved cells.
+        // Assert neither hashmap nor hexdb contain reserved cells.
         for cell in test_cells {
             assert!(!monaco_hashmap.contains_key(&cell));
-            assert!(!monaco_disktree.contains(cell).unwrap());
+            assert!(!monaco_hexdb.contains(cell).unwrap());
         }
 
-        // Assert disktree contains all the same values as the
+        // Assert hexdb contains all the same values as the
         // hashmap.
         for (cell, val) in monaco_hashmap
             .iter()
             .map(|(cell, vec)| (**cell, vec.as_slice()))
         {
-            assert_eq!((cell, val), monaco_disktree.get(cell).unwrap().unwrap())
+            assert_eq!((cell, val), monaco_hexdb.get(cell).unwrap().unwrap())
         }
 
         // Assert hashmap contains all the same values as the
-        // disktree.
-        for (cell, val) in monaco_disktree.iter().unwrap().map(|entry| entry.unwrap()) {
+        // hexdb.
+        for (cell, val) in monaco_hexdb.iter().unwrap().map(|entry| entry.unwrap()) {
             assert_eq!(
                 (cell, val),
                 (
@@ -198,19 +198,19 @@ mod tests {
 
         let file = tempfile::NamedTempFile::new().unwrap();
         let (mut file, path) = file.keep().unwrap();
-        println!("disktree path: {path:?}");
+        println!("hexdb path: {path:?}");
         monaco
-            .to_disktree(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
+            .to_hexdb(&mut file, |wtr, val| bincode::serialize_into(wtr, val))
             .unwrap();
-        let monaco_disktree = DiskTreeMap::open(path).unwrap();
+        let monaco_hexdb = HexDb::open(path).unwrap();
 
         // Create the iterator with the user-defined deserialzer.
-        let disktree_iter = monaco_disktree.iter().unwrap();
+        let hexdb_iter = monaco_hexdb.iter().unwrap();
         let start = std::time::Instant::now();
-        let mut disktree_collection = Vec::new();
-        for res in disktree_iter {
+        let mut hexdb_collection = Vec::new();
+        for res in hexdb_iter {
             let (cell, val_buf) = res.unwrap();
-            disktree_collection.push((cell, bincode::deserialize_from(val_buf).unwrap()));
+            hexdb_collection.push((cell, bincode::deserialize_from(val_buf).unwrap()));
         }
         let elapsed = start.elapsed();
         println!("{elapsed:?}");
@@ -221,20 +221,20 @@ mod tests {
 
         assert_eq!(
             hextree_collection,
-            disktree_collection,
-            "iterating a disktree should yield identically ordered elements as the hextree tree it was derived from"
+            hexdb_collection,
+            "iterating a hexdb should yield identically ordered elements as the hextree tree it was derived from"
         );
     }
 
     #[test]
-    fn test_empty_disktree() {
+    fn test_empty_hexdb() {
         use crate::HexTreeMap;
         use std::io::Cursor;
         let mut wtr = vec![];
         HexTreeMap::<&[u8]>::new()
-            .to_disktree(Cursor::new(&mut wtr), |wtr, val| wtr.write_all(val))
+            .to_hexdb(Cursor::new(&mut wtr), |wtr, val| wtr.write_all(val))
             .unwrap();
-        let disktree = DiskTreeMap::with_buf(wtr).unwrap();
-        assert_eq!(0, disktree.iter().unwrap().count());
+        let hexdb = HexDb::with_buf(wtr).unwrap();
+        assert_eq!(0, hexdb.iter().unwrap().count());
     }
 }

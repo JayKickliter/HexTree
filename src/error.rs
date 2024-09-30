@@ -9,31 +9,31 @@ pub enum Error {
     Index(u64),
 
     /// An io error.
-    #[cfg(feature = "disktree")]
+    #[cfg(feature = "hexdb")]
     Io(std::io::Error),
 
-    /// Not a disktree.
-    #[cfg(feature = "disktree")]
-    NotDisktree,
+    /// Not a hexdb.
+    #[cfg(feature = "hexdb")]
+    NotHexDb,
 
     /// Unsupported version.
-    #[cfg(feature = "disktree")]
+    #[cfg(feature = "hexdb")]
     Version(u8),
 
-    /// Invalid value tag found in disktree.
-    #[cfg(feature = "disktree")]
+    /// Invalid value tag found in hexdb.
+    #[cfg(feature = "hexdb")]
     InvalidTag(u8, u64),
 
-    /// Invalid value size bytes found in disktree header.
-    #[cfg(feature = "disktree")]
+    /// Invalid value size bytes found in hexdb header.
+    #[cfg(feature = "hexdb")]
     Varint(u32),
 
     /// User-provided serializer failed.
-    #[cfg(feature = "disktree")]
+    #[cfg(feature = "hexdb")]
     Writer(Box<dyn std::error::Error + Send + Sync>),
 }
 
-#[cfg(feature = "disktree")]
+#[cfg(feature = "hexdb")]
 impl std::convert::From<std::io::Error> for Error {
     fn from(other: std::io::Error) -> Self {
         Error::Io(other)
@@ -45,22 +45,22 @@ impl std::error::Error for Error {
         match self {
             Error::Index(_) => None,
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Io(inner) => inner.source(),
 
-            #[cfg(feature = "disktree")]
-            Error::NotDisktree => None,
+            #[cfg(feature = "hexdb")]
+            Error::NotHexDb => None,
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Version(_) => None,
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::InvalidTag(_, _) => None,
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Varint(_) => None,
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Writer(inner) => inner.source(),
         }
     }
@@ -71,30 +71,30 @@ impl std::fmt::Display for Error {
         match self {
             Error::Index(bits) => write!(f, "raw u64 is not a valid H3 index: {bits}"),
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Io(io_error) => io_error.fmt(f),
 
-            #[cfg(feature = "disktree")]
-            Error::NotDisktree => {
+            #[cfg(feature = "hexdb")]
+            Error::NotHexDb => {
                 write!(f, "file missing magic header")
             }
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Version(version) => {
                 write!(f, "unsupported version, got {version}")
             }
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::InvalidTag(tag, pos) => {
                 write!(f, "invalid tag, got {tag}, pos {pos}")
             }
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Varint(val) => {
                 write!(f, "byte sequence is not a valid varint, got {val}")
             }
 
-            #[cfg(feature = "disktree")]
+            #[cfg(feature = "hexdb")]
             Error::Writer(writer_error) => {
                 write!(f, "provided writer returned an error, got {writer_error}")
             }

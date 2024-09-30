@@ -9,9 +9,9 @@ use std::{
 /// A 'disk' pointer.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub(crate) struct Dp(u64);
+pub(crate) struct P(u64);
 
-impl Dp {
+impl P {
     #[allow(clippy::cast_possible_truncation)]
     const MAX: u64 = 2_u64.pow(Self::DISK_REPR_SZ as u32 * 8) - 1;
     const DISK_REPR_SZ: usize = 5;
@@ -21,15 +21,16 @@ impl Dp {
         self.0 == Self::NULL
     }
 
-    pub(crate) const fn null() -> Dp {
-        Dp(Self::NULL)
+    pub(crate) const fn null() -> P {
+        P(Self::NULL)
     }
 
     pub(crate) const fn size() -> usize {
         Self::DISK_REPR_SZ
     }
 
-    /// Read 5 bytes from disk and parses them as little-endian `u64`.
+    /// Read [`DISK_REPR_SZ`][Self::DISK_REPR_SZ] bytes from disk and
+    /// parses them as little-endian `u64`.
     pub(crate) fn read<R>(src: &mut R) -> Result<Self>
     where
         R: Read,
@@ -42,7 +43,7 @@ impl Dp {
 
     /// Read 5 * `n` bytes from disk, for up to n=7, and parses them as
     /// little-endian `u64`s.
-    pub(crate) fn read_n<R>(src: &mut R, n: usize) -> Result<Vec<Dp>>
+    pub(crate) fn read_n<R>(src: &mut R, n: usize) -> Result<Vec<P>>
     where
         R: Read,
     {
@@ -56,7 +57,7 @@ impl Dp {
                 buf[..Self::DISK_REPR_SZ].copy_from_slice(chunk);
                 u64::from_le_bytes(buf)
             })
-            .map(Dp::from)
+            .map(P::from)
             .collect())
     }
 
@@ -70,51 +71,51 @@ impl Dp {
     }
 }
 
-impl Add<usize> for Dp {
-    type Output = Dp;
+impl Add<usize> for P {
+    type Output = P;
 
-    fn add(self, rhs: usize) -> Dp {
-        Dp::from(self.0 + rhs as u64)
+    fn add(self, rhs: usize) -> P {
+        P::from(self.0 + rhs as u64)
     }
 }
 
-impl Add<u64> for Dp {
-    type Output = Dp;
+impl Add<u64> for P {
+    type Output = P;
 
-    fn add(self, rhs: u64) -> Dp {
-        Dp::from(self.0 + rhs)
+    fn add(self, rhs: u64) -> P {
+        P::from(self.0 + rhs)
     }
 }
 
-impl Add<u32> for Dp {
-    type Output = Dp;
+impl Add<u32> for P {
+    type Output = P;
 
-    fn add(self, rhs: u32) -> Dp {
-        Dp::from(self.0 + rhs as u64)
+    fn add(self, rhs: u32) -> P {
+        P::from(self.0 + rhs as u64)
     }
 }
 
-impl From<Dp> for u64 {
-    fn from(Dp(raw): Dp) -> u64 {
+impl From<P> for u64 {
+    fn from(P(raw): P) -> u64 {
         raw
     }
 }
 
-impl From<u64> for Dp {
-    fn from(raw: u64) -> Dp {
+impl From<u64> for P {
+    fn from(raw: u64) -> P {
         assert!(raw <= Self::MAX);
-        Dp(raw)
+        P(raw)
     }
 }
 
-impl From<usize> for Dp {
-    fn from(raw: usize) -> Dp {
-        Dp::from(raw as u64)
+impl From<usize> for P {
+    fn from(raw: usize) -> P {
+        P::from(raw as u64)
     }
 }
 
-impl From<Dp> for usize {
-    fn from(Dp(raw): Dp) -> usize {
+impl From<P> for usize {
+    fn from(P(raw): P) -> usize {
         usize::try_from(raw).unwrap()
     }
 }
