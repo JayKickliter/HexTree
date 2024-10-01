@@ -1,25 +1,25 @@
 use crate::{
-    disktree::{dptr::Dp, dtseek::DtSeek, varint},
     error::Result,
+    hexdb::{dbseek::DbSeek, dptr::P, varint},
 };
 use byteorder::ReadBytesExt;
 use std::{io::Read, mem::size_of, ops::Range};
 
 // Enough bytes to read node tag and 7 child dptrs.
-const NODE_BUF_SZ: usize = size_of::<u8>() + 7 * Dp::size();
+const NODE_BUF_SZ: usize = size_of::<u8>() + 7 * P::size();
 
 #[derive(Debug)]
 pub(crate) enum Node {
     // value_begin..value_end
     Leaf(Range<usize>),
     // (H3 Cell digit, file position of child's node tag)
-    Parent([Option<Dp>; 7]),
+    Parent([Option<P>; 7]),
 }
 
 impl Node {
     pub(crate) fn read<R>(rdr: &mut R) -> Result<Node>
     where
-        R: Read + DtSeek,
+        R: Read + DbSeek,
     {
         let start_pos = rdr.pos()?;
         let mut buf = [0u8; NODE_BUF_SZ];
@@ -32,12 +32,12 @@ impl Node {
             let end = begin + val_len;
             Ok(Node::Leaf(usize::from(begin)..usize::from(end)))
         } else {
-            let mut children: [Option<Dp>; 7] = [None, None, None, None, None, None, None];
+            let mut children: [Option<P>; 7] = [None, None, None, None, None, None, None];
             for (_digit, child) in (0..7)
                 .zip(children.iter_mut())
                 .filter(|(digit, _)| node_tag & (1 << digit) != 0)
             {
-                *child = Some(Dp::read(buf_rdr)?);
+                *child = Some(P::read(buf_rdr)?);
             }
             Ok(Node::Parent(children))
         }

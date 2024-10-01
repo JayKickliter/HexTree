@@ -48,13 +48,13 @@ fn set_lookup(c: &mut Criterion) {
     }
 }
 
-#[cfg(not(feature = "disktree"))]
+#[cfg(not(feature = "hexdb"))]
 fn disk_set_lookup(_c: &mut Criterion) {}
 
-#[cfg(feature = "disktree")]
+#[cfg(feature = "hexdb")]
 fn disk_set_lookup(c: &mut Criterion) {
-    use hextree::disktree::DiskTreeMap;
-    let mut group = c.benchmark_group("US915 DiskTreeSet lookup");
+    use hextree::hexdb::HexDb;
+    let mut group = c.benchmark_group("US915 HexDbSet lookup");
 
     let us915_disk_set = {
         let us915_set: HexTreeSet = PLAIN_US915_INDICES
@@ -63,9 +63,9 @@ fn disk_set_lookup(c: &mut Criterion) {
             .collect();
         let mut file = tempfile::tempfile().unwrap();
         us915_set
-            .to_disktree(&mut file, |_, _| Ok::<(), std::io::Error>(()))
+            .to_hexdb(&mut file, |_, _| Ok::<(), std::io::Error>(()))
             .unwrap();
-        DiskTreeMap::memmap(&file).unwrap()
+        HexDb::memmap(&file).unwrap()
     };
 
     let tarpon_springs = coord! {x: -82.753822, y: 28.15215};

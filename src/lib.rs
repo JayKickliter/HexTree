@@ -4,12 +4,12 @@
 mod cell;
 pub mod compaction;
 mod digits;
-#[cfg(feature = "disktree")]
-pub mod disktree;
 mod entry;
 mod error;
 pub mod hex_tree_map;
 mod hex_tree_set;
+#[cfg(feature = "hexdb")]
+pub mod hexdb;
 mod iteration;
 mod node;
 
@@ -17,5 +17,5 @@ pub use crate::cell::Cell;
 pub use crate::hex_tree_map::HexTreeMap;
 pub use crate::hex_tree_set::HexTreeSet;
 pub use error::{Error, Result};
-#[cfg(feature = "disktree")]
+#[cfg(feature = "hexdb")]
 pub use memmap;
