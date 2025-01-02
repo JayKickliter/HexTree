@@ -169,7 +169,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl<'a> DtSeek for Iter<'a> {
+impl DtSeek for Iter<'_> {
     fn pos(&mut self) -> std::io::Result<Dp> {
         self.disktree_csr.pos()
     }
