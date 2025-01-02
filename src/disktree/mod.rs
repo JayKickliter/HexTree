@@ -153,7 +153,7 @@ mod tests {
 
         // Assert neither hashmap nor disktree contain reserved cells.
         for cell in test_cells {
-            assert!(monaco_hashmap.get(&cell).is_none());
+            assert!(!monaco_hashmap.contains_key(&cell));
             assert!(!monaco_disktree.contains(cell).unwrap());
         }
 
