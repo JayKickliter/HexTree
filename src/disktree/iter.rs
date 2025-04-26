@@ -1,6 +1,6 @@
 use crate::{
     cell::CellStack,
-    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_SZ, varint},
+    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_SZ, varint, DiskTreeMap},
     error::{Error, Result},
     Cell,
 };
@@ -105,6 +105,27 @@ impl<'a> Iter<'a> {
             recycle_bin,
             node_stack,
         })
+    }
+
+    pub(crate) fn empty(disktree_buf: &'a [u8]) -> Iter<'a> {
+        let disktree_csr = Cursor::new(disktree_buf);
+        let cell_stack = CellStack::new();
+        let node_stack = Vec::new();
+        let recycle_bin = Vec::new();
+        let curr_node = None;
+        Self {
+            cell_stack,
+            curr_node,
+            disktree_buf,
+            disktree_csr,
+            recycle_bin,
+            node_stack,
+        }
+    }
+
+    /// Creates a new `Iter` over `cell` and its descendants.
+    pub(crate) fn subtree(_disktree: &'a DiskTreeMap, _cell: Cell) -> Result<Iter<'a>> {
+        unimplemented!()
     }
 }
 
