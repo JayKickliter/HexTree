@@ -18,9 +18,15 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features -- -Dclippy::all
+
       - name: Build
         run: cargo build --all-features --benches
+
       - name: Check formatting
         run: cargo fmt --check
+
       - name: Tests
         run: cargo test --release --all-features
+
+      - name: Docs
+        run: RUSTDOCFLAGS=-Dwarnings cargo doc --document-private-items --all-features
