@@ -6,7 +6,7 @@ use crate::{compaction::Compactor, Cell, HexTreeMap};
 /// occupied.
 ///
 /// This enum is constructed from the [entry][HexTreeMap::entry]
-/// method on [HexTreeMap][HexTreeMap].
+/// method on [HexTreeMap].
 pub enum Entry<'a, V, C> {
     /// An occupied entry.
     Occupied(OccupiedEntry<'a, V>),
