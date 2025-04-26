@@ -1,7 +1,7 @@
 use crate::{
     compaction::Compactor,
-    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_MAGIC, varint},
     error::{Error, Result},
+    hexdb::{dbseek::DbSeek, dptr::P, tree::HDR_MAGIC, varint},
     node::Node,
     HexTreeMap,
 };
@@ -12,30 +12,30 @@ impl<V, C> HexTreeMap<V, C>
 where
     C: Compactor<V>,
 {
-    /// Write self to disk.
-    pub fn to_disktree<W, F, E>(&self, wtr: W, f: F) -> Result
+    /// Encode self as a [HexDb](crate::hexdb::HexDb) to the provided writer.
+    pub fn to_hexdb<W, F, E>(&self, wtr: W, f: F) -> Result
     where
         W: Write + std::io::Seek,
         F: Fn(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
-        DiskTreeWriter::new(wtr).write(self, f)
+        HexDbWriter::new(wtr).write(self, f)
     }
 }
 
-pub(crate) struct DiskTreeWriter<W> {
+pub(crate) struct HexDbWriter<W> {
     scratch_pad: Vec<u8>,
     wtr: W,
 }
 
-impl<W> DiskTreeWriter<W> {
+impl<W> HexDbWriter<W> {
     pub fn new(wtr: W) -> Self {
         let scratch_pad = Vec::new();
         Self { wtr, scratch_pad }
     }
 }
 
-impl<W> DiskTreeWriter<W>
+impl<W> HexDbWriter<W>
 where
     W: Write + std::io::Seek,
 {
@@ -50,15 +50,15 @@ where
         const VERSION: u8 = 0;
         self.wtr.write_u8(0xFE - VERSION)?;
 
-        let mut fixups: Vec<(Dp, &Node<V>)> = Vec::new();
+        let mut fixups: Vec<(P, &Node<V>)> = Vec::new();
 
         // Write base cells placeholder offsets.
         for base in hextree.nodes.iter() {
             match base.as_deref() {
-                None => Dp::null().write(&mut self.wtr)?,
+                None => P::null().write(&mut self.wtr)?,
                 Some(node) => {
                     fixups.push((self.pos()?, node));
-                    Dp::null().write(&mut self.wtr)?
+                    P::null().write(&mut self.wtr)?
                 }
             }
         }
@@ -72,13 +72,13 @@ where
         Ok(())
     }
 
-    fn write_node<V, F, E>(&mut self, node: &Node<V>, f: &mut F) -> Result<Dp>
+    fn write_node<V, F, E>(&mut self, node: &Node<V>, f: &mut F) -> Result<P>
     where
         F: FnMut(&mut dyn Write, &V) -> std::result::Result<(), E>,
         E: std::error::Error + Sync + Send + 'static,
     {
         let node_pos = self.fast_forward()?;
-        let mut node_fixups: Vec<(Dp, &Node<V>)> = Vec::new();
+        let mut node_fixups: Vec<(P, &Node<V>)> = Vec::new();
         match node {
             Node::Leaf(val) => {
                 self.scratch_pad.clear();
@@ -105,7 +105,7 @@ where
                             // this node is empty.
                             tag = (tag >> 1) | 0b1000_0000;
                             node_fixups.push((self.pos()?, node));
-                            Dp::null().write(&mut self.wtr)?;
+                            P::null().write(&mut self.wtr)?;
                         }
                     };
                 }
@@ -126,19 +126,19 @@ where
     }
 }
 
-impl<W> DtSeek for DiskTreeWriter<W>
+impl<W> DbSeek for HexDbWriter<W>
 where
     W: std::io::Seek,
 {
-    fn pos(&mut self) -> std::io::Result<Dp> {
+    fn pos(&mut self) -> std::io::Result<P> {
         self.wtr.pos()
     }
 
-    fn seek(&mut self, dp: Dp) -> std::io::Result<Dp> {
-        DtSeek::seek(&mut self.wtr, dp)
+    fn seek(&mut self, dp: P) -> std::io::Result<P> {
+        DbSeek::seek(&mut self.wtr, dp)
     }
 
-    fn fast_forward(&mut self) -> std::io::Result<Dp> {
+    fn fast_forward(&mut self) -> std::io::Result<P> {
         self.wtr.fast_forward()
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     cell::CellStack,
-    disktree::{dptr::Dp, dtseek::DtSeek, tree::HDR_SZ, varint},
     error::{Error, Result},
+    hexdb::{dbseek::DbSeek, dptr::P, tree::HDR_SZ, varint},
     Cell,
 };
 use byteorder::ReadBytesExt;
@@ -9,26 +9,26 @@ use std::io::Cursor;
 
 pub(crate) struct Iter<'a> {
     cell_stack: CellStack,
-    curr_node: Option<(u8, Dp)>,
-    disktree_buf: &'a [u8],
-    disktree_csr: Cursor<&'a [u8]>,
-    node_stack: Vec<Vec<(u8, Dp)>>,
-    recycle_bin: Vec<Vec<(u8, Dp)>>,
+    curr_node: Option<(u8, P)>,
+    hexdb_buf: &'a [u8],
+    hexdb_csr: Cursor<&'a [u8]>,
+    node_stack: Vec<Vec<(u8, P)>>,
+    recycle_bin: Vec<Vec<(u8, P)>>,
 }
 
 enum Node {
     // File position for the fist byte of value data.
-    Leaf(Dp),
+    Leaf(P),
     // (H3 Cell digit, file position of child's node tag)
-    Parent(Vec<(u8, Dp)>),
+    Parent(Vec<(u8, P)>),
 }
 
 impl<'a> Iter<'a> {
-    pub(crate) fn read_base_nodes(rdr: &mut Cursor<&[u8]>) -> Result<Vec<(u8, Dp)>> {
+    pub(crate) fn read_base_nodes(rdr: &mut Cursor<&[u8]>) -> Result<Vec<(u8, P)>> {
         let mut buf = Vec::with_capacity(122);
         rdr.seek(HDR_SZ.into())?;
         for digit in 0..122 {
-            let dptr = Dp::read(rdr)?;
+            let dptr = P::read(rdr)?;
             if !dptr.is_null() {
                 buf.push((digit, dptr));
             }
@@ -38,15 +38,15 @@ impl<'a> Iter<'a> {
     }
 
     // `pos` is a position in the file of this node's tag.
-    fn read_node(&mut self, dptr: Dp) -> Result<Node> {
+    fn read_node(&mut self, dptr: P) -> Result<Node> {
         let dptr = self.seek(dptr)?;
-        let node_tag = self.disktree_csr.read_u8()?;
+        let node_tag = self.hexdb_csr.read_u8()?;
         if 0 == node_tag & 0b1000_0000 {
             Ok(Node::Leaf(dptr))
         } else {
             let mut children = self.node_buf();
             let n_children = (node_tag & 0b0111_1111).count_ones() as usize;
-            let child_dptrs = Dp::read_n(&mut self.disktree_csr, n_children)?;
+            let child_dptrs = P::read_n(&mut self.hexdb_csr, n_children)?;
             children.extend(
                 (0..7)
                     .rev()
@@ -61,7 +61,7 @@ impl<'a> Iter<'a> {
     /// allocates a new one.
     ///
     /// See [`Iter::recycle_node_buf`].
-    fn node_buf(&mut self) -> Vec<(u8, Dp)> {
+    fn node_buf(&mut self) -> Vec<(u8, P)> {
         let buf = self
             .recycle_bin
             .pop()
@@ -73,7 +73,7 @@ impl<'a> Iter<'a> {
     /// Accepts a used, empty, node buffer for later reuse.
     ///
     /// See  [`Iter::node_buf`].
-    fn recycle_node_buf(&mut self, buf: Vec<(u8, Dp)>) {
+    fn recycle_node_buf(&mut self, buf: Vec<(u8, P)>) {
         debug_assert!(buf.is_empty());
         self.recycle_bin.push(buf);
     }
@@ -86,12 +86,12 @@ impl<'a> Iter<'a> {
         self.curr_node = None;
     }
 
-    pub(crate) fn new(disktree_buf: &'a [u8]) -> Result<Iter<'a>> {
-        let mut disktree_csr = Cursor::new(disktree_buf);
+    pub(crate) fn new(hexdb_buf: &'a [u8]) -> Result<Iter<'a>> {
+        let mut hexdb_csr = Cursor::new(hexdb_buf);
         let mut cell_stack = CellStack::new();
         let mut node_stack = Vec::new();
         let recycle_bin = Vec::new();
-        let mut base_nodes = Self::read_base_nodes(&mut disktree_csr)?;
+        let mut base_nodes = Self::read_base_nodes(&mut hexdb_csr)?;
         let curr_node = base_nodes.pop();
         node_stack.push(base_nodes);
         if let Some((digit, _)) = curr_node {
@@ -100,8 +100,8 @@ impl<'a> Iter<'a> {
         Ok(Self {
             cell_stack,
             curr_node,
-            disktree_buf,
-            disktree_csr,
+            hexdb_buf,
+            hexdb_csr,
             recycle_bin,
             node_stack,
         })
@@ -148,14 +148,14 @@ impl<'a> Iterator for Iter<'a> {
                         self.stop_yielding();
                         return Some(Err(Error::from(e)));
                     }
-                    match varint::read(&mut self.disktree_csr) {
+                    match varint::read(&mut self.hexdb_csr) {
                         Err(e) => {
                             self.stop_yielding();
                             return Some(Err(e));
                         }
                         Ok((val_len, _n_read)) => {
-                            let pos = self.disktree_csr.position() as usize;
-                            let val_buf = &self.disktree_buf[pos..][..val_len as usize];
+                            let pos = self.hexdb_csr.position() as usize;
+                            let val_buf = &self.hexdb_buf[pos..][..val_len as usize];
                             return Some(Ok((
                                 *self.cell_stack.cell().expect("corrupted cell-stack"),
                                 val_buf,
@@ -169,16 +169,16 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl DtSeek for Iter<'_> {
-    fn pos(&mut self) -> std::io::Result<Dp> {
-        self.disktree_csr.pos()
+impl DbSeek for Iter<'_> {
+    fn pos(&mut self) -> std::io::Result<P> {
+        self.hexdb_csr.pos()
     }
 
-    fn seek(&mut self, dp: Dp) -> std::io::Result<Dp> {
-        self.disktree_csr.seek(dp)
+    fn seek(&mut self, dp: P) -> std::io::Result<P> {
+        self.hexdb_csr.seek(dp)
     }
 
-    fn fast_forward(&mut self) -> std::io::Result<Dp> {
-        self.disktree_csr.fast_forward()
+    fn fast_forward(&mut self) -> std::io::Result<P> {
+        self.hexdb_csr.fast_forward()
     }
 }
