@@ -1,3 +1,6 @@
+//! This implementation is based on [A Better
+//! Varint](https://dcreager.net/2021/03/a-better-varint).
+
 use crate::error::{Error, Result};
 use byteorder::{BigEndian as BE, ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
