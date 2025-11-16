@@ -61,7 +61,7 @@ impl DiskTreeMap {
 
     /// Returns `(Cell, &[u8])`, if present.
     pub fn get(&self, cell: Cell) -> Result<Option<(Cell, &[u8])>> {
-        if let Some((cell, Node::Leaf(range))) = self.get_raw(cell)? {
+        if let Some((cell, _, Node::Leaf(range))) = self.get_raw(cell)? {
             let val_bytes = &(*self.0).as_ref()[range];
             Ok(Some((cell, val_bytes)))
         } else {
@@ -70,7 +70,7 @@ impl DiskTreeMap {
     }
 
     /// Returns `(Cell, Node)`, if present.
-    pub(crate) fn get_raw(&self, cell: Cell) -> Result<Option<(Cell, Node)>> {
+    pub(crate) fn get_raw(&self, cell: Cell) -> Result<Option<(Cell, Dp, Node)>> {
         let base_cell_pos = Self::base_cell_dptr(cell);
         let mut csr = Cursor::new((*self.0).as_ref());
         csr.seek(SeekFrom::Start(base_cell_pos.into()))?;
@@ -88,13 +88,14 @@ impl DiskTreeMap {
         node_dptr: Dp,
         cell: Cell,
         mut digits: Digits,
-    ) -> Result<Option<(Cell, Node)>> {
+    ) -> Result<Option<(Cell, Dp, Node)>> {
         csr.seek(SeekFrom::Start(node_dptr.into()))?;
         let node = Node::read(csr)?;
         match (digits.next(), &node) {
-            (None, _) => Ok(Some((cell, node))),
+            (None, _) => Ok(Some((cell, node_dptr, node))),
             (Some(_), Node::Leaf(_)) => Ok(Some((
                 cell.to_parent(res).expect("invalid condition"),
+                node_dptr,
                 node,
             ))),
             (Some(digit), Node::Parent(children)) => match children[digit as usize] {
@@ -113,6 +114,17 @@ impl DiskTreeMap {
     /// arbitrary order.
     pub fn iter(&self) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
         Iter::new((*self.0).as_ref())
+    }
+
+    /// Returns an iterator visiting the specified `cell` or its descendants.
+    pub fn descendants(&self, cell: Cell) -> Result<impl Iterator<Item = Result<(Cell, &[u8])>>> {
+        let iter = match self.get_raw(cell)? {
+            None => crate::disktree::iter::Iter::empty((*self.0).as_ref()),
+            Some((cell, dp, node)) => {
+                crate::disktree::iter::Iter::descendants((*self.0).as_ref(), cell, dp, node)?
+            }
+        };
+        Ok(iter)
     }
 
     /// Returns the DPtr to a base (res0) cell dptr.

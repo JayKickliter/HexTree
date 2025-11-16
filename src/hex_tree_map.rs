@@ -244,7 +244,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// An iterator visiting the specified cell or its children
     /// references to the values.
-    pub fn subtree_iter(&self, cell: Cell) -> impl Iterator<Item = (Cell, &V)> {
+    pub fn descendants(&self, cell: Cell) -> impl Iterator<Item = (Cell, &V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
             Some(node) => {
@@ -265,7 +265,7 @@ impl<V, C> HexTreeMap<V, C> {
 
     /// An iterator visiting the specified cell or its children with
     /// mutable references to the values.
-    pub fn subtree_iter_mut(&mut self, cell: Cell) -> impl Iterator<Item = (Cell, &mut V)> {
+    pub fn descendants_mut(&mut self, cell: Cell) -> impl Iterator<Item = (Cell, &mut V)> {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_mut() {
             Some(node) => {

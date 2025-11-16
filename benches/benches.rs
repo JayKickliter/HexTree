@@ -249,7 +249,7 @@ fn set_iteration(c: &mut Criterion) {
     group.bench_function("count", |b| b.iter(|| set_precompacted.iter().count()));
 }
 
-fn subtree_iter(c: &mut Criterion) {
+fn descendants(c: &mut Criterion) {
     let mut group = c.benchmark_group("Subtree iteration");
 
     let eiffel_tower_cells = {
@@ -285,7 +285,7 @@ fn subtree_iter(c: &mut Criterion) {
     group.bench_function("Eiffel Tower Sum - Res1", |b| {
         b.iter(|| {
             hex_map
-                .subtree_iter(eiffel_tower_res1_parent)
+                .descendants(eiffel_tower_res1_parent)
                 .map(|(_cell, val)| val)
                 .sum::<i32>()
         })
@@ -295,7 +295,7 @@ fn subtree_iter(c: &mut Criterion) {
     group.bench_function("Eiffel Tower Sum - Res7", |b| {
         b.iter(|| {
             hex_map
-                .subtree_iter(eiffel_tower_res6_parent)
+                .descendants(eiffel_tower_res6_parent)
                 .map(|(_cell, val)| val)
                 .sum::<i32>()
         })
@@ -306,7 +306,7 @@ criterion_group!(
     benches,
     set_lookup,
     disk_set_lookup,
-    subtree_iter,
+    descendants,
     map_lookup,
     set_iteration,
     map_iteration,

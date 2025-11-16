@@ -225,7 +225,7 @@ mod tests {
         ];
 
         let hexmap: HexTreeMap<Cell> = children.iter().map(|cell| (cell, cell)).collect();
-        let visited = hexmap.subtree_iter(parent).collect::<Vec<_>>();
+        let visited = hexmap.descendants(parent).collect::<Vec<_>>();
 
         for (expected, (actual_k, actual_v)) in children.iter().zip(visited.iter()) {
             assert_eq!(expected, *actual_v);
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn test_subtree_iter_sum() {
+    fn test_descendants_sum() {
         // {
         //   "type": "FeatureCollection",
         //   "features": [
@@ -376,7 +376,7 @@ mod tests {
             .collect();
         let eiffel_tower_res1_parent = Cell::from_raw(0x811fbffffffffff).unwrap();
         let value_sum: i32 = hex_map
-            .subtree_iter(eiffel_tower_res1_parent)
+            .descendants(eiffel_tower_res1_parent)
             .map(|(_cell, val)| val)
             .sum();
         // Establish the sum of map values in the eiffel tower block.
@@ -385,11 +385,11 @@ mod tests {
         let west_mask_res9 = Cell::from_raw(0x891fb46741bffff).unwrap();
         let east_mask_res9 = Cell::from_raw(0x891fb467413ffff).unwrap();
         let west_value_sum: i32 = hex_map
-            .subtree_iter(west_mask_res9)
+            .descendants(west_mask_res9)
             .map(|(_cell, val)| val)
             .sum();
         let east_value_sum: i32 = hex_map
-            .subtree_iter(east_mask_res9)
+            .descendants(east_mask_res9)
             .map(|(_cell, val)| val)
             .sum();
         // Now we have the sum of two difference subtrees, both of
@@ -400,12 +400,12 @@ mod tests {
 
         let expected_sum = hex_map.len() as i32 + value_sum;
 
-        for (_cell, val) in hex_map.subtree_iter_mut(eiffel_tower_res1_parent) {
+        for (_cell, val) in hex_map.descendants_mut(eiffel_tower_res1_parent) {
             *val += 1;
         }
 
         let value_sum: i32 = hex_map
-            .subtree_iter(eiffel_tower_res1_parent)
+            .descendants(eiffel_tower_res1_parent)
             .map(|(_cell, val)| val)
             .sum();
 
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_subtree_iter() {
+    fn test_descendants() {
         use crate::{compaction::NullCompactor, Cell, HexTreeMap};
         use h3o::{CellIndex, Resolution};
         use std::convert::TryFrom;
@@ -449,7 +449,7 @@ mod tests {
 
         let monaco_hextree_collect = monaco_hextree.iter().map(|item| item.0).collect::<Vec<_>>();
         let combined_subtree_collect = combined_hextree
-            .subtree_iter(monaco_res6_cell)
+            .descendants(monaco_res6_cell)
             .map(|item| item.0)
             .collect::<Vec<_>>();
         assert_eq!(monaco_hextree_collect, combined_subtree_collect);
