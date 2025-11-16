@@ -1,4 +1,8 @@
-//! An on-disk hextree.
+//! On-disk memory-mapped storage for HexTree.
+//!
+//! DiskTree provides a serialized, memory-mapped representation of a HexTreeMap,
+//! allowing you to store and query very large trees without loading them entirely
+//! into memory.
 
 #[cfg(not(target_pointer_width = "64"))]
 compile_warning!("disktree may silently fail on non-64bit systems");
@@ -36,7 +40,7 @@ mod tests {
         }
 
         // Construct map with a compactor that automatically combines
-        // cells with the same save value.
+        // cells with the same value.
         let mut monaco = HexTreeMap::with_compactor(EqCompactor);
 
         // Now extend the map with cells and a region value.
@@ -190,7 +194,7 @@ mod tests {
         }
 
         // Construct map with a compactor that automatically combines
-        // cells with the same save value.
+        // cells with the same value.
         let mut monaco = HexTreeMap::new();
 
         // Now extend the map with cells and a region value.
@@ -204,7 +208,7 @@ mod tests {
             .unwrap();
         let monaco_disktree = DiskTreeMap::open(path).unwrap();
 
-        // Create the iterator with the user-defined deserialzer.
+        // Create the iterator with the user-defined deserializer.
         let disktree_iter = monaco_disktree.iter().unwrap();
         let start = std::time::Instant::now();
         let mut disktree_collection = Vec::new();
@@ -294,7 +298,7 @@ mod tests {
             assert_eq!(
                 leaf_vec.len(),
                 1,
-                "Iterator must have extactly one element for a leaf"
+                "Iterator must have exactly one element for a leaf"
             );
             assert_eq!(hextree_leaf, leaf_vec[0].0);
         }

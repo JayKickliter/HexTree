@@ -15,5 +15,5 @@ mod node;
 
 pub use crate::{cell::Cell, hex_tree_map::HexTreeMap, hex_tree_set::HexTreeSet};
 pub use error::{Error, Result};
-#[cfg(feature = "disktree")]
-pub use memmap;
+#[cfg(feature = "serde")]
+pub use serde;
