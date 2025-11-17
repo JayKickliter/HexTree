@@ -1,6 +1,6 @@
-//! This has two different types representing H3 indices is slightly
+//! This has two different types representing H3 indices in slightly
 //! different ways, [Index] & [Cell]. Index is lower level and allows
-//! you create invalid H3 indices. Cell is higher level and enforces
+//! you to create invalid H3 indices. Cell is higher level and enforces
 //! invariants.
 
 use crate::{Error, Result};
@@ -8,7 +8,7 @@ use std::{convert::TryFrom, fmt};
 
 /// A low-level type for H3 [index manipulation].
 ///
-/// Node that all setters take consume `self` and return a new
+/// Note that all setters consume `self` and return a new
 /// `Index`.
 ///
 /// [index manipulation]: https://observablehq.com/@nrabinowitz/h3-index-bit-layout?collection=@nrabinowitz/h3
@@ -112,7 +112,7 @@ impl Index {
         }
     }
 
-    /// Consumes `self` and returns a new Index with it's resolution
+    /// Consumes `self` and returns a new Index with its resolution
     /// `res` digit set to `digit`.
     ///
     /// This function does not check `res` nor `digit` for validity
@@ -129,7 +129,10 @@ impl Index {
     }
 }
 
-/// [HexTreeMap][crate::HexTreeMap]'s key type.
+/// A validated H3 cell index.
+///
+/// This is the key type for [HexTreeMap][crate::HexTreeMap]. A `Cell`
+/// is guaranteed to be a valid H3 cell (mode 1 index).
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 #[cfg_attr(
     feature = "serde",
@@ -153,7 +156,7 @@ impl Cell {
         if
         // reserved must be 0
         !idx.reserved() &&
-        // we only care about mode 1 (cell) indicies
+        // we only care about mode 1 (cell) indices
         idx.mode() == 1 &&
         // there are only 122 base cells
         idx.base() < 122
@@ -172,8 +175,9 @@ impl Cell {
 
     /// Returns this cell's parent at the specified resolution.
     ///
-    /// Returns Some if `res` is less-than or equal-to this cell's
-    /// resolution, otherwise returns None.
+    /// Returns `Some` if `res` is less than or equal to this cell's
+    /// resolution. Returns `None` if `res` is greater than this cell's
+    /// resolution (you cannot get a higher-resolution parent).
     #[inline]
     pub const fn to_parent(&self, res: u8) -> Option<Self> {
         match self.res() {
@@ -203,12 +207,12 @@ impl Cell {
         Index(self.0).res()
     }
 
-    /// Returns true if `self` is related to `other`.
+    /// Returns `true` if this cell is related to another cell.
     ///
-    /// "Related" can be any of the following:
-    /// - `self` == `other`
-    /// - `self` is a parent cell of `other`
-    /// - `other` is a parent cell of `self`
+    /// Two cells are related if they share a parent-child relationship:
+    /// - `self` and `other` are the same cell, or
+    /// - `self` is an ancestor (parent, grandparent, etc.) of `other`, or
+    /// - `other` is an ancestor of `self`
     #[inline]
     pub fn is_related_to(&self, other: &Self) -> bool {
         let common_res = std::cmp::min(self.res(), other.res());
@@ -238,7 +242,7 @@ impl TryFrom<i64> for Cell {
     }
 }
 
-/// A type for building up Cells in an iterative matter when
+/// A type for building up Cells in an iterative manner when
 /// tree-walking.
 pub(crate) struct CellStack(Option<Cell>);
 
@@ -282,7 +286,7 @@ impl CellStack {
         }
     }
 
-    /// If self currency contains a cell, this replaces the digit at
+    /// If self currently contains a cell, this replaces the digit at
     /// its current res and returns what was there. If self is empty,
     /// nothing is replaced and None is returned.
     pub fn swap(&mut self, digit: u8) -> Option<u8> {

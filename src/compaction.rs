@@ -1,21 +1,27 @@
-//! User pluggable compaction.
+//! User-pluggable compaction strategies.
+//!
+//! Compaction allows the tree to automatically coalesce child cells into
+//! their parent when certain conditions are met, reducing memory usage
+//! and improving query performance.
 
 use crate::Cell;
 
-/// A user provided compactor.
+/// A user-provided compactor.
 ///
-/// The compactor trait allows you customize compaction behavior after
+/// The compactor trait allows you to customize compaction behavior after
 /// calling `insert` on a tree.
 pub trait Compactor<V> {
     /// Called after every insert into a non-leaf node.
     ///
-    /// Given an intermediate (not-leaf) node's cell and up to 7
+    /// Given an intermediate (non-leaf) node's cell and up to 7
     /// children, you can choose to leave the node alone by returning
-    /// `None`, or turn it into a leaf-node by return `Some(value)`.
+    /// `None`, or turn it into a leaf node by returning `Some(value)`.
     fn compact(&mut self, cell: Cell, children: [Option<&V>; 7]) -> Option<V>;
 }
 
-/// Does not perform any compaction.
+/// A compactor that performs no compaction.
+///
+/// This is the default compactor and leaves all inserted cells as-is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NullCompactor;
@@ -26,7 +32,11 @@ impl<V> Compactor<V> for NullCompactor {
     }
 }
 
-/// Compacts when all children are complete.
+/// A compactor that coalesces nodes when all 7 children are present.
+///
+/// This is typically used with `HexTreeSet` (where values are `()`).
+/// When all 7 children of a node are complete, they are replaced with
+/// a single parent cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetCompactor;
@@ -41,7 +51,11 @@ impl Compactor<()> for SetCompactor {
     }
 }
 
-/// Compacts when all children are complete and have the same value.
+/// A compactor that coalesces nodes when all 7 children have equal values.
+///
+/// When all 7 children of a node are present and have the same value,
+/// they are replaced with a single parent cell containing that value.
+/// This is useful for maps where large contiguous regions share the same value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EqCompactor;
