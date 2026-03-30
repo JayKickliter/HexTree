@@ -16,7 +16,10 @@ use std::{
 pub(crate) const HDR_MAGIC: &[u8] = b"hextree\0";
 pub(crate) const HDR_SZ: usize = HDR_MAGIC.len() + 1;
 
-/// An on-disk hextree map.
+/// A memory-mapped, on-disk HexTreeMap.
+///
+/// This structure provides read-only access to a HexTreeMap that has
+/// been serialized to disk.
 pub struct DiskTreeMap(pub(crate) Box<dyn AsRef<[u8]> + Send + Sync + 'static>);
 
 impl DiskTreeMap {

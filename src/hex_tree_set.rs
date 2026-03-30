@@ -2,7 +2,7 @@ use crate::{compaction::SetCompactor, Cell, HexTreeMap};
 use std::iter::FromIterator;
 
 /// A HexTreeSet is a structure for representing geographical regions
-/// and efficiently testing performing hit-tests on that region. Or,
+/// and efficiently performing hit-tests on that region. Or,
 /// in other words: I have a region defined; does it contain this
 /// point on earth?
 ///

@@ -42,7 +42,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 /// }
 ///
 /// // Construct map with a compactor that automatically combines
-/// // cells with the same save value.
+/// // cells with the same value.
 /// let mut monaco = HexTreeMap::with_compactor(EqCompactor);
 ///
 /// // Now extend the map with cells and a region value.
@@ -66,7 +66,7 @@ use std::{cmp::PartialEq, iter::FromIterator};
 pub struct HexTreeMap<V, C = NullCompactor> {
     /// All h3 0 base cell indices in the tree
     pub(crate) nodes: Box<[Option<Box<Node<V>>>]>,
-    /// User-provided compator. Defaults to the null compactor.
+    /// User-provided compactor. Defaults to the null compactor.
     compactor: C,
 }
 
@@ -121,7 +121,7 @@ impl<V, C> HexTreeMap<V, C> {
     /// `self`.
     ///
     /// This method is useful if you want to use one compaction
-    /// strategy for creating an initial, then another one for updates
+    /// strategy for creating an initial tree, then another one for updates
     /// later.
     pub fn replace_compactor<NewC>(self, new_compactor: NewC) -> HexTreeMap<V, NewC> {
         HexTreeMap {
@@ -130,12 +130,11 @@ impl<V, C> HexTreeMap<V, C> {
         }
     }
 
-    /// Returns the number of H3 cells in the set.
+    /// Returns the number of H3 cells in the map.
     ///
-    /// This method only considers complete, or leaf, cells in the
-    /// set. Due to automatic compaction, this number may be
-    /// significantly smaller than the number of source cells used to
-    /// create the set.
+    /// This method only counts leaf cells (complete entries) in the
+    /// map. Due to automatic compaction, this number may be
+    /// significantly smaller than the number of cells originally inserted.
     pub fn len(&self) -> usize {
         self.nodes.iter().flatten().map(|node| node.len()).sum()
     }
@@ -145,17 +144,15 @@ impl<V, C> HexTreeMap<V, C> {
         self.len() == 0
     }
 
-    /// Returns `true` if the set fully contains `cell`.
+    /// Returns `true` if the map fully contains `cell`.
     ///
-    /// This method will return `true` if any of the following are
-    /// true:
+    /// This method returns `true` if any of the following are true:
     ///
-    /// 1. There was an earlier [insert][Self::insert] call with
-    ///    precisely this target cell.
-    /// 2. Several previously inserted cells coalesced into
-    ///    precisely this target cell.
-    /// 3. The set contains a complete (leaf) parent of this target
-    ///    cell due to 1 or 2.
+    /// 1. This exact cell was previously inserted.
+    /// 2. Several previously inserted cells were compacted into
+    ///    this cell as their parent.
+    /// 3. The map contains a parent of this cell (due to 1 or 2),
+    ///    meaning this cell inherits its parent's value.
     pub fn contains(&self, cell: Cell) -> bool {
         let base_cell = cell.base();
         match self.nodes[base_cell as usize].as_ref() {
@@ -167,11 +164,11 @@ impl<V, C> HexTreeMap<V, C> {
         }
     }
 
-    /// Returns a reference to the value corresponding to the given
-    /// target cell or one of its parents.
+    /// Returns a reference to the value for the given cell or its nearest parent.
     ///
-    /// Note that this method also returns a Cell, which may be a
-    /// parent of the target cell provided.
+    /// Returns `Some((cell, value))` where `cell` is either the queried cell
+    /// or a parent cell that contains it. Returns `None` if no matching cell
+    /// or parent is found.
     #[inline]
     pub fn get(&self, cell: Cell) -> Option<(Cell, &V)> {
         match self.get_raw(cell) {
@@ -192,11 +189,11 @@ impl<V, C> HexTreeMap<V, C> {
         }
     }
 
-    /// Returns a mutable reference to the value corresponding to the
-    /// given target cell or one of its parents.
+    /// Returns a mutable reference to the value for the given cell or its nearest parent.
     ///
-    /// Note that this method also returns a Cell, which may be a
-    /// parent of the target cell provided.
+    /// Returns `Some((cell, value))` where `cell` is either the queried cell
+    /// or a parent cell that contains it. Returns `None` if no matching cell
+    /// or parent is found.
     #[inline]
     pub fn get_mut(&mut self, cell: Cell) -> Option<(Cell, &mut V)> {
         match self.get_raw_mut(cell) {
@@ -242,7 +239,7 @@ impl<V, C> HexTreeMap<V, C> {
         crate::iteration::IterMut::new(&mut self.nodes, CellStack::new())
     }
 
-    /// An iterator visiting the specified cell or its children
+    /// An iterator visiting the specified cell or its children with
     /// references to the values.
     pub fn descendants(&self, cell: Cell) -> impl Iterator<Item = (Cell, &V)> {
         let base_cell = cell.base();
